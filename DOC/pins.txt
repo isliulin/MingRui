@@ -1,0 +1,9 @@
+RE0   LCD背光开关，1开，0关
+
+
+LCD引脚：
+	RC3：CLK
+	RC5：DAT
+	RD0：ADR
+	RD1：RES
+	RD2：CS
