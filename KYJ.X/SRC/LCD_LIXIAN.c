@@ -10,7 +10,7 @@
 #include "LCD_LIXIAN.h"
 #include "delay.h"
 
-//´®¿ÚÄ£Ê½ÏÂÖ»ÄÜĞ´²»ÄÜ¶Á,Ò²²»ÄÜ²éÃ¦,Òò´ËÓÃ»§Òª¿ØÖÆºÃËÙ¶È²»ÒªÌ«¿ì
+//ä¸²å£æ¨¡å¼ä¸‹åªèƒ½å†™ä¸èƒ½è¯»,ä¹Ÿä¸èƒ½æŸ¥å¿™,å› æ­¤ç”¨æˆ·è¦æ§åˆ¶å¥½é€Ÿåº¦ä¸è¦å¤ªå¿«
 void WriteCommand( Uchar CommandByte )
 {
 	Uchar i;
@@ -66,11 +66,11 @@ void LcmInit( void )
 
 	WriteCommand(0xAE);	//Display OFF
 	WriteCommand(0xA2);	//1/64 Duty 1/9 Bias
-	WriteCommand(0xA0);	//ADC select S0->S131(²£Á§Éè¼ÆÓÃS1-S128)
+	WriteCommand(0xA0);	//ADC select S0->S131(ç»ç’ƒè®¾è®¡ç”¨S1-S128)
 	WriteCommand(0xC0);	//com1 --> com64
-	WriteCommand(0x24);	//¶ÔÄ³Ğ©Ä£¿éÃ»ÓÃ,ÓÃµÄÍâ²¿Rb/Ra
+	WriteCommand(0x24);	//å¯¹æŸäº›æ¨¡å—æ²¡ç”¨,ç”¨çš„å¤–éƒ¨Rb/Ra
 	WriteCommand(0x81);	//Sets V0
-	WriteCommand(48);	//ÄÚ²¿µçÎ»Æ÷µ÷½Ú¶Ô±È¶È
+	WriteCommand(48);	//å†…éƒ¨ç”µä½å™¨è°ƒèŠ‚å¯¹æ¯”åº¦
 	WriteCommand(0x2F);	//voltage follower ON  regulator ON  booster ON
 	WriteCommand(0xA6);	//Normal Display (not reverse dispplay)
 	WriteCommand(0xA4);	//Entire Display Disable	
@@ -82,12 +82,12 @@ void LcmInit( void )
 	WriteCommand(0xAF);	//Display ON
 }
 
-//ÏÔÊ¾ASICC×Ö·ûµÄº¯Êı
+//æ˜¾ç¤ºASICCå­—ç¬¦çš„å‡½æ•°
 void LcmPutChar(Uchar col,Uchar page,Uchar Order)
 {
 	Uchar i;
 	Uint x;
-	x = (Order-0x20)*0x10;			//ASICC×Ö·û´Ó0x20¿ªÊ¼,Ã¿¸ö16 byte
+	x = (Order-0x20)*0x10;			//ASICCå­—ç¬¦ä»0x20å¼€å§‹,æ¯ä¸ª16 byte
 	WriteCommand(ComTable[page&0x07]|0xB0);	//Set Page Address
 	WriteCommand( ((col+1)>>4) | 0x10);	//Set Column Address High Byte
 	WriteCommand( (col+1)&0x0F );		//Low Byte  Colum from S128 -> S1 auto add
@@ -98,7 +98,7 @@ void LcmPutChar(Uchar col,Uchar page,Uchar Order)
 		WriteData( ASCIIchardot[x] );
 		x++;
 	}
-	page++;					//ÏÂ°ë×Ö·ûpage+1
+	page++;					//ä¸‹åŠå­—ç¬¦page+1
 	
 	WriteCommand(ComTable[page&0x07]|0xB0);	//Set Page Address
 	WriteCommand( ((col+1)>>4) | 0x10);		//Set Column Address High Byte
@@ -109,41 +109,41 @@ void LcmPutChar(Uchar col,Uchar page,Uchar Order)
 		WriteData( ASCIIchardot[x] );
 		x++;
 	}
-	page--;					//Ğ´ÍêÒ»¸ö×Ö·ûpage»¹Ô­
+	page--;					//å†™å®Œä¸€ä¸ªå­—ç¬¦pageè¿˜åŸ
 }
 
-//ÏÔÊ¾×Ö·û´®µÄº¯Êı
+//æ˜¾ç¤ºå­—ç¬¦ä¸²çš„å‡½æ•°
 void LcmPutStr(Uchar col,Uchar page,Uchar *puts)
 {
-	while(*puts != '\0')		//ÅĞ¶Ï×Ö·û´®Ê±ºòÏÔÊ¾Íê±Ï
+	while(*puts != '\0')		//åˆ¤æ–­å­—ç¬¦ä¸²æ—¶å€™æ˜¾ç¤ºå®Œæ¯•
 	{
 		
-		if(col>(LcmXPixel-8))		//ÅĞ¶ÏĞĞÄ©¿Õ¼äÊÇ·ñ×ã¹»·ÅÒ»¸ö×Ö·û,×Ô¶¯»»ĞĞ
+		if(col>(LcmXPixel-8))		//åˆ¤æ–­è¡Œæœ«ç©ºé—´æ˜¯å¦è¶³å¤Ÿæ”¾ä¸€ä¸ªå­—ç¬¦,è‡ªåŠ¨æ¢è¡Œ
 		{
 			page=page+2;
 			col=0;
 		}
-		if(page>(LcmYPixel/8-2))	//µ½ÁËÆÁÄ»×îÏÂ½Ç,×Ô¶¯·µ»Ø×óÉÏ½Ç
+		if(page>(LcmYPixel/8-2))	//åˆ°äº†å±å¹•æœ€ä¸‹è§’,è‡ªåŠ¨è¿”å›å·¦ä¸Šè§’
 		{
 			page=0;
 			col=0;
 		}	
 		LcmPutChar(col,page,*puts);
 		puts++;
-		col=col+8;		//ÏÂÒ»¸ö×Ö·û8ÁĞÖ®ºó
+		col=col+8;		//ä¸‹ä¸€ä¸ªå­—ç¬¦8åˆ—ä¹‹å
 	}
 }
-//ÏÔÊ¾3Î»ÊıµÄÊıÖµ(0-255)
+//æ˜¾ç¤º3ä½æ•°çš„æ•°å€¼(0-255)
 void LcmPutNum(Uchar col,Uchar page,Uchar Num)
 {
 	Uchar a,b,c;
 	a=Num/100;
 	b=(Num%100)/10;
 	c=Num%10;
-	if(a==0) ;	//Ò²²»Ğ´¿Õ¸ñ,Ö±½ÓÌø¹ıÈ¥//PutChar(col,page,0x20);
+	if(a==0) ;	//ä¹Ÿä¸å†™ç©ºæ ¼,ç›´æ¥è·³è¿‡å»//PutChar(col,page,0x20);
 	  else LcmPutChar(col,page,a+0x30);
 	  
-	if(a==0 && b==0) ;	//Ò²²»Ğ´¿Õ¸ñ,Ö±½ÓÌø¹ıÈ¥//LcmPutChar(col,page,0x20);
+	if(a==0 && b==0) ;	//ä¹Ÿä¸å†™ç©ºæ ¼,ç›´æ¥è·³è¿‡å»//LcmPutChar(col,page,0x20);
 	  else LcmPutChar(col+8,page,b+0x30);
 	  
 	LcmPutChar(col+16,page,c+0x30);

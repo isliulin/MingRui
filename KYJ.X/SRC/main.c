@@ -7,16 +7,16 @@
 __CONFIG (FOSC_INTOSC&WDTE_OFF &PWRTE_ON  & MCLRE_ON& CLKOUTEN_OFF); 
 
 	char bTimer1Flag;
-//������
+//主函数
 void main()
 {
 	Uchar i;
-	Uchar contrast=48;			//�Աȶ�=48(�������ǳ��õ��ⲿ�����������)
+	Uchar contrast=48;			//对比度=48(根据我们常用的外部电阻参数来的)
 
 
-	OSCCON = 0x7A; //����CPUʱ��Ƶ��Ϊ16MHz
+	OSCCON = 0x7A; //配置CPU时钟频率为16MHz
 
-	//��ʱ��1���ã�10ms��ԴFosc/4���ٷ�Ƶ1:2��10msһ���ж�
+	//定时器1配置，10ms，源Fosc/4，再分频1:2，10ms一次中断
 	TMR1ON = 0;
 	TMR1GE = 0;
 	TMR1CS1 = 0;
@@ -70,13 +70,13 @@ DelayMs(100);
 		for(i=(contrast-5);i<(contrast+5);i++)
 		{
 			WriteCommand(0x81);	//Sets V0
-			WriteCommand(0x3F&i);	//�ڲ���λ�����ڶԱȶ�
+			WriteCommand(0x3F&i);	//内部电位器调节对比度
 			LcmPutNum(10,2,i);
 			DelayS(1);
 		}
 		
 		WriteCommand(0x81);		//Sets V0
-		WriteCommand(contrast);	//�ָ��Աȶ�
+		WriteCommand(contrast);	//恢复对比度
 		LcmPutNum(10,2,contrast);
 		
 		//LcmClear(0xff);
@@ -93,7 +93,7 @@ DelayMs(100);
 }
 
 
-//�жϴ�������
+//中断处理程序
 void interrupt isr(void) 
 {
         // Timer 0 Interrupt
@@ -119,7 +119,7 @@ void interrupt isr(void)
          //if (ADIF == 1 && ADIE == 1) 
          //{           }
 		
-		//�����ж�
+		//串口中断
 }
 
 void LCD_Init()
@@ -129,7 +129,7 @@ void LCD_Init()
 //RD1: RES
 //RD2: CS
 //RC4: DAT
-SSPEN = 0; //��ֹSPI
+SSPEN = 0; //禁止SPI
 ANSELD &= 0b11111000;
 TRISC3 = 0;
 TRISC4 = 0;
@@ -143,7 +143,7 @@ SSPM1 = 0;
 SSPM2 = 0;
 SSPM3 = 0;
 
-SSPEN = 1; //ʹ��SPI
+SSPEN = 1; //使能SPI
 
 
 }
