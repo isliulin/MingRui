@@ -47,7 +47,7 @@ void LcmClear( Uchar FillData )
 	{
 		WriteCommand(0xB0|ComTable[i]);	//Set Page Address
 		WriteCommand(0x10);	//Set Column Address = 0
-		WriteCommand(0x01);	//Colum from S1 -> S128 auto add
+		WriteCommand(0x00);	//Colum from S1 -> S128 auto add
 		for(j=0;j<128;j++)
 		{
 			WriteData( FillData );
@@ -157,7 +157,7 @@ void LcmPutBmp( Uchar *puts )
 	{
 		WriteCommand(0xB0|ComTable[i]);	//Set Page Address
 		WriteCommand(0x10);	//Set Column Address = 0
-		WriteCommand(0x01);	//Colum from S1 -> S128 auto add
+		WriteCommand(0x00);	//Colum from S1 -> S128 auto add
 		for(j=0;j<LcmXPixel;j++)
 		{
 			WriteData( puts[X] );
@@ -165,3 +165,23 @@ void LcmPutBmp( Uchar *puts )
 		}
 	}
 }
+
+void LcmPutCChar()
+{
+    unsigned char CChar[2][16] = {
+        {0x08,0x06,0x40,0x31,0x00,0x00,0x7F,0x49,0x49,0x49,0x49,0x49,0x7F,0x00,0x00,0x00},
+        {0x20,0x20,0x7E,0x80,0x02,0x7E,0x42,0x42,0x7E,0x42,0x7E,0x42,0x42,0x7E,0x02,0x00}/*"温",0*/
+    };
+    Uchar i,j;
+	for(i=0;i<2;i++)
+	{
+		WriteCommand(0xB0|ComTable[i]);	//Set Page Address
+		WriteCommand(0x10);	//Set Column Address = 0
+		WriteCommand(0x00);	//Colum from S1 -> S128 auto add
+		for(j=0;j<16;j++)
+		{
+			WriteData( CChar[i][j] );
+		}
+	}
+}
+

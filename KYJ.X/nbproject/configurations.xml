@@ -5,11 +5,14 @@
       <itemPath>SRC/LCD_LIXIAN.h</itemPath>
       <itemPath>SRC/always.h</itemPath>
       <itemPath>SRC/delay.h</itemPath>
+      <itemPath>SRC/KYJDEF.h</itemPath>
+      <itemPath>SRC/EEPROM.h</itemPath>
     </logicalFolder>
     <logicalFolder name="SourceFiles" displayName="源文件" projectFiles="true">
       <itemPath>SRC/LCD_LIXIAN.c</itemPath>
       <itemPath>SRC/delay.c</itemPath>
       <itemPath>SRC/main.c</itemPath>
+      <itemPath>SRC/EEPROM.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles" displayName="重要文件" projectFiles="false">
       <itemPath>Makefile</itemPath>
@@ -128,6 +131,9 @@
         <property key="unused-interrupt-vectors" value="-vec_reset,-vec_func"/>
         <property key="warn-on-stack-overflow" value="true"/>
       </HI-TECH-LINK>
+      <PICkit3PlatformTool>
+        <property key="firmware.download.all" value="false"/>
+      </PICkit3PlatformTool>
     </conf>
   </confs>
 </configurationDescriptor>

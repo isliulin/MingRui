@@ -21,7 +21,7 @@ Uchar code ASCIIchardot[];
 //Uchar code bmp1[];
 //Uchar code bmp2[];
 //Uchar code bmp3[];
-Uchar code ComTable[]={3,2,1,0,7,6,5,4,};
+Uchar code ComTable[]={7,6,5,4,3,2,1,0,};
 
 void WriteCommand( Uchar CommandByte );
 void WriteData( Uchar DataByte );
@@ -31,6 +31,7 @@ void LcmPutChar(Uchar col,Uchar page,Uchar Order);
 void LcmPutStr(Uchar col,Uchar page,Uchar *puts);
 void LcmPutNum(Uchar col,Uchar page,Uchar Num);
 void LcmPutBmp( Uchar *puts );
+void LcmPutCChar(void);
 
 /* ASICC字库代码 8x16点阵 */
 unsigned char code ASCIIchardot[16*96] = {
