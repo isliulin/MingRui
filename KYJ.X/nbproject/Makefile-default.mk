@@ -45,17 +45,17 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Source Files Quoted if spaced
-SOURCEFILES_QUOTED_IF_SPACED=SRC/LCD_LIXIAN.c SRC/delay.c SRC/main.c SRC/EEPROM.c
+SOURCEFILES_QUOTED_IF_SPACED=SRC/LCD_LIXIAN.c SRC/delay.c SRC/main.c SRC/EEPROM.c SRC/KYJDEF.c SRC/adc.c SRC/key.c
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/SRC/LCD_LIXIAN.p1 ${OBJECTDIR}/SRC/delay.p1 ${OBJECTDIR}/SRC/main.p1 ${OBJECTDIR}/SRC/EEPROM.p1
-POSSIBLE_DEPFILES=${OBJECTDIR}/SRC/LCD_LIXIAN.p1.d ${OBJECTDIR}/SRC/delay.p1.d ${OBJECTDIR}/SRC/main.p1.d ${OBJECTDIR}/SRC/EEPROM.p1.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/SRC/LCD_LIXIAN.p1 ${OBJECTDIR}/SRC/delay.p1 ${OBJECTDIR}/SRC/main.p1 ${OBJECTDIR}/SRC/EEPROM.p1 ${OBJECTDIR}/SRC/KYJDEF.p1 ${OBJECTDIR}/SRC/adc.p1 ${OBJECTDIR}/SRC/key.p1
+POSSIBLE_DEPFILES=${OBJECTDIR}/SRC/LCD_LIXIAN.p1.d ${OBJECTDIR}/SRC/delay.p1.d ${OBJECTDIR}/SRC/main.p1.d ${OBJECTDIR}/SRC/EEPROM.p1.d ${OBJECTDIR}/SRC/KYJDEF.p1.d ${OBJECTDIR}/SRC/adc.p1.d ${OBJECTDIR}/SRC/key.p1.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/SRC/LCD_LIXIAN.p1 ${OBJECTDIR}/SRC/delay.p1 ${OBJECTDIR}/SRC/main.p1 ${OBJECTDIR}/SRC/EEPROM.p1
+OBJECTFILES=${OBJECTDIR}/SRC/LCD_LIXIAN.p1 ${OBJECTDIR}/SRC/delay.p1 ${OBJECTDIR}/SRC/main.p1 ${OBJECTDIR}/SRC/EEPROM.p1 ${OBJECTDIR}/SRC/KYJDEF.p1 ${OBJECTDIR}/SRC/adc.p1 ${OBJECTDIR}/SRC/key.p1
 
 # Source Files
-SOURCEFILES=SRC/LCD_LIXIAN.c SRC/delay.c SRC/main.c SRC/EEPROM.c
+SOURCEFILES=SRC/LCD_LIXIAN.c SRC/delay.c SRC/main.c SRC/EEPROM.c SRC/KYJDEF.c SRC/adc.c SRC/key.c
 
 
 CFLAGS=
@@ -119,6 +119,30 @@ ${OBJECTDIR}/SRC/EEPROM.p1: SRC/EEPROM.c  nbproject/Makefile-${CND_CONF}.mk
 	@cat ${OBJECTDIR}/SRC/EEPROM.dep >> ${OBJECTDIR}/SRC/EEPROM.p1.d
 	@${FIXDEPS} "${OBJECTDIR}/SRC/EEPROM.p1.d" $(SILENT) -ht  -rsi ${MP_CC_DIR}../ 
 	
+${OBJECTDIR}/SRC/KYJDEF.p1: SRC/KYJDEF.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}/SRC" 
+	${MP_CC} --pass1 SRC/KYJDEF.c $(MP_EXTRA_CC_PRE) -q --chip=$(MP_PROCESSOR_OPTION) -P  --outdir="${OBJECTDIR}\SRC" -N31 --warn=0 --runtime=default,+clear,+init,-keep,+osccal,-resetbits,-download,-stackcall,+clib --summary=default,-psect,-class,+mem,-hex --opt=default,+asm,-asmfile,-speed,+space,-debug,9 -D__DEBUG --debugger=pickit3  --double=24 --float=24 --addrqual=ignore --mode=pro -g --asmlist "--errformat=%f:%l: error: %s" "--msgformat=%f:%l: advisory: %s" "--warnformat=%f:%l warning: %s"
+	@${MP_CC} --scandep  SRC/KYJDEF.c $(MP_EXTRA_CC_PRE) -q --chip=$(MP_PROCESSOR_OPTION) -P  --outdir="${OBJECTDIR}\SRC" -N31 --warn=0 --runtime=default,+clear,+init,-keep,+osccal,-resetbits,-download,-stackcall,+clib --opt=default,+asm,-asmfile,-speed,+space,-debug,9 -D__DEBUG --debugger=pickit3  --double=24 --float=24 --addrqual=ignore --mode=pro -g --asmlist "--errformat=%f:%l: error: %s" "--msgformat=%f:%l: advisory: %s" "--warnformat=%f:%l warning: %s"
+	@echo ${OBJECTDIR}/SRC/KYJDEF.p1: > ${OBJECTDIR}/SRC/KYJDEF.p1.d
+	@cat ${OBJECTDIR}/SRC/KYJDEF.dep >> ${OBJECTDIR}/SRC/KYJDEF.p1.d
+	@${FIXDEPS} "${OBJECTDIR}/SRC/KYJDEF.p1.d" $(SILENT) -ht  -rsi ${MP_CC_DIR}../ 
+	
+${OBJECTDIR}/SRC/adc.p1: SRC/adc.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}/SRC" 
+	${MP_CC} --pass1 SRC/adc.c $(MP_EXTRA_CC_PRE) -q --chip=$(MP_PROCESSOR_OPTION) -P  --outdir="${OBJECTDIR}\SRC" -N31 --warn=0 --runtime=default,+clear,+init,-keep,+osccal,-resetbits,-download,-stackcall,+clib --summary=default,-psect,-class,+mem,-hex --opt=default,+asm,-asmfile,-speed,+space,-debug,9 -D__DEBUG --debugger=pickit3  --double=24 --float=24 --addrqual=ignore --mode=pro -g --asmlist "--errformat=%f:%l: error: %s" "--msgformat=%f:%l: advisory: %s" "--warnformat=%f:%l warning: %s"
+	@${MP_CC} --scandep  SRC/adc.c $(MP_EXTRA_CC_PRE) -q --chip=$(MP_PROCESSOR_OPTION) -P  --outdir="${OBJECTDIR}\SRC" -N31 --warn=0 --runtime=default,+clear,+init,-keep,+osccal,-resetbits,-download,-stackcall,+clib --opt=default,+asm,-asmfile,-speed,+space,-debug,9 -D__DEBUG --debugger=pickit3  --double=24 --float=24 --addrqual=ignore --mode=pro -g --asmlist "--errformat=%f:%l: error: %s" "--msgformat=%f:%l: advisory: %s" "--warnformat=%f:%l warning: %s"
+	@echo ${OBJECTDIR}/SRC/adc.p1: > ${OBJECTDIR}/SRC/adc.p1.d
+	@cat ${OBJECTDIR}/SRC/adc.dep >> ${OBJECTDIR}/SRC/adc.p1.d
+	@${FIXDEPS} "${OBJECTDIR}/SRC/adc.p1.d" $(SILENT) -ht  -rsi ${MP_CC_DIR}../ 
+	
+${OBJECTDIR}/SRC/key.p1: SRC/key.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}/SRC" 
+	${MP_CC} --pass1 SRC/key.c $(MP_EXTRA_CC_PRE) -q --chip=$(MP_PROCESSOR_OPTION) -P  --outdir="${OBJECTDIR}\SRC" -N31 --warn=0 --runtime=default,+clear,+init,-keep,+osccal,-resetbits,-download,-stackcall,+clib --summary=default,-psect,-class,+mem,-hex --opt=default,+asm,-asmfile,-speed,+space,-debug,9 -D__DEBUG --debugger=pickit3  --double=24 --float=24 --addrqual=ignore --mode=pro -g --asmlist "--errformat=%f:%l: error: %s" "--msgformat=%f:%l: advisory: %s" "--warnformat=%f:%l warning: %s"
+	@${MP_CC} --scandep  SRC/key.c $(MP_EXTRA_CC_PRE) -q --chip=$(MP_PROCESSOR_OPTION) -P  --outdir="${OBJECTDIR}\SRC" -N31 --warn=0 --runtime=default,+clear,+init,-keep,+osccal,-resetbits,-download,-stackcall,+clib --opt=default,+asm,-asmfile,-speed,+space,-debug,9 -D__DEBUG --debugger=pickit3  --double=24 --float=24 --addrqual=ignore --mode=pro -g --asmlist "--errformat=%f:%l: error: %s" "--msgformat=%f:%l: advisory: %s" "--warnformat=%f:%l warning: %s"
+	@echo ${OBJECTDIR}/SRC/key.p1: > ${OBJECTDIR}/SRC/key.p1.d
+	@cat ${OBJECTDIR}/SRC/key.dep >> ${OBJECTDIR}/SRC/key.p1.d
+	@${FIXDEPS} "${OBJECTDIR}/SRC/key.p1.d" $(SILENT) -ht  -rsi ${MP_CC_DIR}../ 
+	
 else
 ${OBJECTDIR}/SRC/LCD_LIXIAN.p1: SRC/LCD_LIXIAN.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} "${OBJECTDIR}/SRC" 
@@ -151,6 +175,30 @@ ${OBJECTDIR}/SRC/EEPROM.p1: SRC/EEPROM.c  nbproject/Makefile-${CND_CONF}.mk
 	@echo ${OBJECTDIR}/SRC/EEPROM.p1: > ${OBJECTDIR}/SRC/EEPROM.p1.d
 	@cat ${OBJECTDIR}/SRC/EEPROM.dep >> ${OBJECTDIR}/SRC/EEPROM.p1.d
 	@${FIXDEPS} "${OBJECTDIR}/SRC/EEPROM.p1.d" $(SILENT) -ht  -rsi ${MP_CC_DIR}../ 
+	
+${OBJECTDIR}/SRC/KYJDEF.p1: SRC/KYJDEF.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}/SRC" 
+	${MP_CC} --pass1 SRC/KYJDEF.c $(MP_EXTRA_CC_PRE) -q --chip=$(MP_PROCESSOR_OPTION) -P  --outdir="${OBJECTDIR}\SRC" -N31 --warn=0 --runtime=default,+clear,+init,-keep,+osccal,-resetbits,-download,-stackcall,+clib --summary=default,-psect,-class,+mem,-hex --opt=default,+asm,-asmfile,-speed,+space,-debug,9  --double=24 --float=24 --addrqual=ignore --mode=pro -g --asmlist "--errformat=%f:%l: error: %s" "--msgformat=%f:%l: advisory: %s" "--warnformat=%f:%l warning: %s"
+	@${MP_CC} --scandep  SRC/KYJDEF.c $(MP_EXTRA_CC_PRE) -q --chip=$(MP_PROCESSOR_OPTION) -P  --outdir="${OBJECTDIR}\SRC" -N31 --warn=0 --runtime=default,+clear,+init,-keep,+osccal,-resetbits,-download,-stackcall,+clib --opt=default,+asm,-asmfile,-speed,+space,-debug,9  --double=24 --float=24 --addrqual=ignore --mode=pro -g --asmlist "--errformat=%f:%l: error: %s" "--msgformat=%f:%l: advisory: %s" "--warnformat=%f:%l warning: %s"
+	@echo ${OBJECTDIR}/SRC/KYJDEF.p1: > ${OBJECTDIR}/SRC/KYJDEF.p1.d
+	@cat ${OBJECTDIR}/SRC/KYJDEF.dep >> ${OBJECTDIR}/SRC/KYJDEF.p1.d
+	@${FIXDEPS} "${OBJECTDIR}/SRC/KYJDEF.p1.d" $(SILENT) -ht  -rsi ${MP_CC_DIR}../ 
+	
+${OBJECTDIR}/SRC/adc.p1: SRC/adc.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}/SRC" 
+	${MP_CC} --pass1 SRC/adc.c $(MP_EXTRA_CC_PRE) -q --chip=$(MP_PROCESSOR_OPTION) -P  --outdir="${OBJECTDIR}\SRC" -N31 --warn=0 --runtime=default,+clear,+init,-keep,+osccal,-resetbits,-download,-stackcall,+clib --summary=default,-psect,-class,+mem,-hex --opt=default,+asm,-asmfile,-speed,+space,-debug,9  --double=24 --float=24 --addrqual=ignore --mode=pro -g --asmlist "--errformat=%f:%l: error: %s" "--msgformat=%f:%l: advisory: %s" "--warnformat=%f:%l warning: %s"
+	@${MP_CC} --scandep  SRC/adc.c $(MP_EXTRA_CC_PRE) -q --chip=$(MP_PROCESSOR_OPTION) -P  --outdir="${OBJECTDIR}\SRC" -N31 --warn=0 --runtime=default,+clear,+init,-keep,+osccal,-resetbits,-download,-stackcall,+clib --opt=default,+asm,-asmfile,-speed,+space,-debug,9  --double=24 --float=24 --addrqual=ignore --mode=pro -g --asmlist "--errformat=%f:%l: error: %s" "--msgformat=%f:%l: advisory: %s" "--warnformat=%f:%l warning: %s"
+	@echo ${OBJECTDIR}/SRC/adc.p1: > ${OBJECTDIR}/SRC/adc.p1.d
+	@cat ${OBJECTDIR}/SRC/adc.dep >> ${OBJECTDIR}/SRC/adc.p1.d
+	@${FIXDEPS} "${OBJECTDIR}/SRC/adc.p1.d" $(SILENT) -ht  -rsi ${MP_CC_DIR}../ 
+	
+${OBJECTDIR}/SRC/key.p1: SRC/key.c  nbproject/Makefile-${CND_CONF}.mk
+	@${MKDIR} "${OBJECTDIR}/SRC" 
+	${MP_CC} --pass1 SRC/key.c $(MP_EXTRA_CC_PRE) -q --chip=$(MP_PROCESSOR_OPTION) -P  --outdir="${OBJECTDIR}\SRC" -N31 --warn=0 --runtime=default,+clear,+init,-keep,+osccal,-resetbits,-download,-stackcall,+clib --summary=default,-psect,-class,+mem,-hex --opt=default,+asm,-asmfile,-speed,+space,-debug,9  --double=24 --float=24 --addrqual=ignore --mode=pro -g --asmlist "--errformat=%f:%l: error: %s" "--msgformat=%f:%l: advisory: %s" "--warnformat=%f:%l warning: %s"
+	@${MP_CC} --scandep  SRC/key.c $(MP_EXTRA_CC_PRE) -q --chip=$(MP_PROCESSOR_OPTION) -P  --outdir="${OBJECTDIR}\SRC" -N31 --warn=0 --runtime=default,+clear,+init,-keep,+osccal,-resetbits,-download,-stackcall,+clib --opt=default,+asm,-asmfile,-speed,+space,-debug,9  --double=24 --float=24 --addrqual=ignore --mode=pro -g --asmlist "--errformat=%f:%l: error: %s" "--msgformat=%f:%l: advisory: %s" "--warnformat=%f:%l warning: %s"
+	@echo ${OBJECTDIR}/SRC/key.p1: > ${OBJECTDIR}/SRC/key.p1.d
+	@cat ${OBJECTDIR}/SRC/key.dep >> ${OBJECTDIR}/SRC/key.p1.d
+	@${FIXDEPS} "${OBJECTDIR}/SRC/key.p1.d" $(SILENT) -ht  -rsi ${MP_CC_DIR}../ 
 	
 endif
 

@@ -14,6 +14,8 @@ extern "C" {
 
 void EEPROM_Write(unsigned char nAddr, unsigned char nData);
 unsigned char EEPROM_Read(unsigned char nAddr);
+void EEPROM_Save_Param(unsigned char nBytes);
+void EEPROM_Load_Param(unsigned char nBytes);
 
 
 #ifdef	__cplusplus

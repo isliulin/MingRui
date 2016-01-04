@@ -9,6 +9,7 @@
 /**************************************************************/
 #include "LCD_LIXIAN.h"
 #include "delay.h"
+//#include <math.h>
 
 //串口模式下只能写不能读,也不能查忙,因此用户要控制好速度不要太快
 void WriteCommand( Uchar CommandByte )
@@ -134,7 +135,7 @@ void LcmPutStr(Uchar col,Uchar page,Uchar *puts)
 	}
 }
 //显示3位数的数值(0-255)
-void LcmPutNum(Uchar col,Uchar page,Uchar Num)
+/*void LcmPutNum(Uchar col,Uchar page,Uchar Num)
 {
 	Uchar a,b,c;
 	a=Num/100;
@@ -147,6 +148,45 @@ void LcmPutNum(Uchar col,Uchar page,Uchar Num)
 	  else LcmPutChar(col+8,page,b+0x30);
 	  
 	LcmPutChar(col+16,page,c+0x30);
+}
+*/
+void LcmPutNum(unsigned char col,unsigned char page, int Num)
+{
+    unsigned char a,i,j,k,flag;
+    int NumLeft,b;
+    k=col;
+    flag = 0;
+    NumLeft = Num;
+    if(Num<0)
+    {
+        LcmPutChar(k,page,'-');
+        k=k+8;
+        NumLeft = -Num;
+    }
+    for(i=4;i>0;i--)
+    {
+        b=NumLeft;
+        for(j=0;j<i;j++)
+        {
+        b=b/10;
+        }
+        a=b;
+        if(a>0 || flag==1)
+        {
+            LcmPutChar(k,page,a+0x30);
+            k=k+8;   //左对齐
+            //NumLeft = NumLeft - a*10^(4-i);
+            flag = 1;
+        }
+        b=a;
+        for(j=0;j<i;j++)
+        {
+        b=b*10;
+        }
+        NumLeft = NumLeft%b;
+        //k=k+8; //右对齐
+    }
+    LcmPutChar(k,page,NumLeft+0x30);
 }
 
 void LcmPutBmp( Uchar *puts )
@@ -180,8 +220,40 @@ void LcmPutCChar()
 		WriteCommand(0x00);	//Colum from S1 -> S128 auto add
 		for(j=0;j<16;j++)
 		{
-			WriteData( CChar[i][j] );
+			WriteData( SONGchardot[i][j] );
 		}
 	}
 }
+void LcmPutSongStr(unsigned char nLine, unsigned char nCol,unsigned char nCharIndex[],unsigned char nLen, unsigned char nInv)
+{
+    unsigned char i,j,k;
+    for(k=0;k<nLen;k++)
+    {
+        for(i=0;i<2;i++)
+        {
+            WriteCommand(0xB0|ComTable[i+nLine]);	//Set Page Address
+            WriteCommand(0x10|(nCol+k*16)>>4);	//Set Column Address = 0
+            WriteCommand(0x0F&(nCol+k*16));	//Colum from S1 -> S128 auto add
+            for(j=0;j<16;j++)
+            {
+                if(nInv==0)
+                    WriteData( SONGchardot[(nCharIndex[k]-1)*2+i][j] );
+                else
+                    WriteData( ~SONGchardot[(nCharIndex[k]-1)*2+i][j] );
+            }
+        }
+    }
+    
+}
 
+void LcmSetSongBuff(unsigned char ch1,unsigned char ch2,unsigned char ch3,unsigned char ch4,unsigned char ch5,unsigned char ch6,unsigned char ch7,unsigned char ch8)
+{
+                BuffCharDot[0]=ch1;
+                BuffCharDot[1]=ch2;
+                BuffCharDot[2]=ch3;
+                BuffCharDot[3]=ch4;
+                BuffCharDot[4]=ch5;
+                BuffCharDot[5]=ch6;
+                BuffCharDot[6]=ch7;
+                BuffCharDot[7]=ch8;
+}

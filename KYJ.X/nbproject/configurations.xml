@@ -7,12 +7,17 @@
       <itemPath>SRC/delay.h</itemPath>
       <itemPath>SRC/KYJDEF.h</itemPath>
       <itemPath>SRC/EEPROM.h</itemPath>
+      <itemPath>SRC/adc.h</itemPath>
+      <itemPath>SRC/key.h</itemPath>
     </logicalFolder>
     <logicalFolder name="SourceFiles" displayName="源文件" projectFiles="true">
       <itemPath>SRC/LCD_LIXIAN.c</itemPath>
       <itemPath>SRC/delay.c</itemPath>
       <itemPath>SRC/main.c</itemPath>
       <itemPath>SRC/EEPROM.c</itemPath>
+      <itemPath>SRC/KYJDEF.c</itemPath>
+      <itemPath>SRC/adc.c</itemPath>
+      <itemPath>SRC/key.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles" displayName="重要文件" projectFiles="false">
       <itemPath>Makefile</itemPath>

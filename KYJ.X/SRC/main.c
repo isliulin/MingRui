@@ -4,19 +4,19 @@
 #include "LCD_LIXIAN.h"
 #include "EEPROM.h"
 #include "KYJDEF.h"
+#include "adc.h"
+#include "key.h"
 
 //__CONFIG (FOSC_INTOSC&WDTE_OFF &PWRTE_ON  & MCLRE_OFF& CLKOUTEN_OFF); 
 __CONFIG (FOSC_INTOSC&WDTE_OFF &PWRTE_ON  & MCLRE_ON& CLKOUTEN_OFF); 
 
-	char bTimer1Flag;
-   struct KYJ_s sKYJ;
-    
-    void IO_Config(void);
+char bTimer1Flag;
+void IO_Config(void);
 //主函数
 void main()
 {
 	Uchar i;
-	Uchar contrast=48;			//对比度=48(根据我们常用的外部电阻参数来的)
+	int contrast;			//对比度=48(根据我们常用的外部电阻参数来的)
 
 
 	OSCCON = 0x7A; //配置CPU时钟频率为16MHz
@@ -39,25 +39,81 @@ void main()
 //	nCount = 0;
 	bTimer1Flag = 0;
     IO_Config();  //初始化所有端口
-DelayMs(100);
-LcmInit();
-DelayMs(100);
-sKYJ.nStatus = STATUS_POWERSTOP;
-sKYJ.nStatusTimeElapse = 0;
+    
+    //初始化参数，如果已经保存到EEPROM，则读取，否则默认值初始化并保存
+    KYJ_Param_Default();
+    if(EEPROM_Read(0x10) == 100)
+    {
+        EEPROM_Load_Param(PARAM_STORE_BYTES);
+    }
+    else
+    {
+        EEPROM_Save_Param(PARAM_STORE_BYTES);
+        EEPROM_Write(0x10,100);
+    }
+    
+    DelayMs(100);
+    LcmInit();
+    LED_ON;
+    DelayMs(100);
+    sKYJ.nStatus = STATUS_POWERSTOP;
+    sKYJ.nStatusTimeElapse = 0;
+    adc_init();
+    contrast = -20;
+    
+    //显示欢迎界面
+    LcmSetSongBuff(1,2,3,4,0,0,0,0);
+    LcmPutSongStr(1,30,BuffCharDot,4,0);
+
+    LcmSetSongBuff(5,6,7,8,9,0,0,0);
+    LcmPutSongStr(4,20,BuffCharDot,5,0);
+    DelayS(2);
+    LcmClear(0x00);
+    sKYJ.nInterface = 0; //设成0后会自动切换到main界面
     while(1)
 	{
+        //检查状态
+        if(KYJ_CheckStatus(STATUS_POWERSTOP)) KYJ_SwitchToStatus(STATUS_POWERSTOP);
+		if(KYJ_CheckStatus(STATUS_KEYSTOP)) KYJ_SwitchToStatus(STATUS_KEYSTOP);
+		if(KYJ_CheckStatus(STATUS_DELAYSTOP)) KYJ_SwitchToStatus(STATUS_DELAYSTOP);
+		if(KYJ_CheckStatus(STATUS_FAULTSTOP)) KYJ_SwitchToStatus(STATUS_FAULTSTOP);
+		if(KYJ_CheckStatus(STATUS_STARTUP)) KYJ_SwitchToStatus(STATUS_STARTUP);
+		if(KYJ_CheckStatus(STATUS_LOAD)) KYJ_SwitchToStatus(STATUS_LOAD);
+		if(KYJ_CheckStatus(STATUS_UNLOAD)) KYJ_SwitchToStatus(STATUS_UNLOAD);
+		if(KYJ_CheckStatus(STATUS_MANUAL)) KYJ_SwitchToStatus(STATUS_MANUAL);
+		KYJ_ExcecuteStatus();
+
+        //检查界面
+        if(KYJ_CheckInterface(INTERFACE_MAIN)) KYJ_SwitchToInterface(INTERFACE_MAIN);
+		if(KYJ_CheckInterface(INTERFACE_MENU)) KYJ_SwitchToInterface(INTERFACE_MENU);
+		if(KYJ_CheckInterface(INTERFACE_RUNPARAM)) KYJ_SwitchToInterface(INTERFACE_RUNPARAM);
+		if(KYJ_CheckInterface(INTERFACE_USERPARAM)) KYJ_SwitchToInterface(INTERFACE_USERPARAM);
+		if(KYJ_CheckInterface(INTERFACE_FACTORYPARAM)) KYJ_SwitchToInterface(INTERFACE_FACTORYPARAM);
+		if(KYJ_CheckInterface(INTERFACE_REGPARAM)) KYJ_SwitchToInterface(INTERFACE_REGPARAM);
+		if(KYJ_CheckInterface(INTERFACE_PASSWORD)) KYJ_SwitchToInterface(INTERFACE_PASSWORD);
+		if(KYJ_CheckInterface(INTERFACE_PARAM)) KYJ_SwitchToInterface(INTERFACE_PARAM);
+		KYJ_ExecuteInterface();
+        
+//        if((sKYJ.nStatus & STATUS_POWERSTOP) && Key_Release(KEY_START))
+//        {
+//            sKYJ.nStatus = STATUS_STARTUP;
+//            sKYJ.nInterface = INTERFACE_MAIN;
+//            sKYJ.nStatusTimeElapse = 0;
+//            LcmClear(0x00);
+//        }
+        
 
 		if(bTimer1Flag == 1)
 		{
             sKYJ.nStatusTimeElapse++;
 			bTimer1Flag = 0;
 		}
-
-		DelayS(1);
+        
+		//DelayS(1);
 //		RD0=!RD0;
 
   //    LcmPutBmp(bmp1);
-		LcmClear(0x00);
+		//LcmClear(0x00);
 //		for(i=(contrast-5);i<(contrast+5);i++)
 //		{
 //			WriteCommand(0x81);	//Sets V0
@@ -65,22 +121,31 @@ sKYJ.nStatusTimeElapse = 0;
 //			LcmPutNum(10,2,i);
 //			DelayS(1);
 //		}
-		LcmPutCChar();
+		//LcmPutCChar();
+
 //		WriteCommand(0x81);		//Sets V0
 //		WriteCommand(contrast);	//恢复对比度
-        contrast = EEPROM_Read(0x10);
-		LcmPutNum(10,0,contrast);
-        EEPROM_Write(0x10,++contrast);
-		
+        //contrast = EEPROM_Read(0x10);
+        
+                
+
+        //contrast = adc_Get_Value(CH_Pressure);
+        //contrast++;
+        //LcmPutNum(0,0,contrast);
+		//LcmPutNum(10,0,sKYJ.sRunParam.nLoadTime);
+        //EEPROM_Write(0x10,++contrast);
+        //KYJ_Param_Default();
+        //EEPROM_Save_Param(10);
+
 		//LcmClear(0xff);
-		DelayS(1);
-		
+		//DelayS(1);
+		//DelayMs(100);
 //		LcmClear(0);
 //		LcmPutStr(0,0,"CA12864I2 Program");
-		LcmPutStr(0,2,"SunSon ELEC-TECH");
-		LcmPutStr(0,4,"TEL:755-29970110");
-		LcmPutStr(0,6,"By LJ 2009.04.08");
-		DelayS(1);
+//		LcmPutStr(0,2,"SunSon ELEC-TECH");
+//		LcmPutStr(0,4,"TEL:755-29970110");
+//		LcmPutStr(0,6,"By LJ 2009.04.08");
+//		DelayS(1);
 
 	}
 }
@@ -170,6 +235,8 @@ void IO_Config(void)
     //端口B设置；RB4 温度输入；RB0 停止开关输入；RB1，RB2，RB3 按键输入 5、6、7
     ANSELB = 0b00010000;
     TRISB = 0b00011111;
+    WPUB = 0b00001111;  //使能RB0~RB3的弱上拉
+    OPTION_REG &= 0b01111111; //使能弱上拉功能
     
     //端口C设置：RC5 DAT输出；RC3 CLK输出；RC2 继电器开关输出
     TRISC = 0b11010011;
