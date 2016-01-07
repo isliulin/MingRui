@@ -17,9 +17,11 @@ struct KYJ_RunParam_s
     float fCurrentA; //主机A相电流，单位：A
     float fCurrentB; //主机B相电流，单位：A
     float fCurrentC; //主机C相电流，单位：A
-    float fCurrentFan; //风机电流，单位：A
-    int nTotaleTime; //运行总时间，单位：分钟
-    int nLoadTime; //负载总时间：单位：分钟
+    //float fCurrentFan; //风机电流，单位：A
+    float fPressure; //压力
+    float fTemperature; //温度
+    unsigned long nTotaleTime; //运行总时间，单位：分钟
+    unsigned long nLoadTime; //负载总时间：单位：分钟
 };
 
 struct KYJ_UserParam_s
@@ -131,11 +133,11 @@ struct KYJ_Password_s
 #define MOTOR_SW_ON RC2=1
 #define MOTOR_SW_OFF RC2=0
 #define LOAD_SW_ON RA6=1
-#define LOAS_SW_OFF RA6=0
+#define LOAD_SW_OFF RA6=0
 #define FAN_SW_ON RA7=1
 #define FAN_SW_OFF RA7=0
 
-#define PARAM_STORE_BYTES 85 //EEPROM保存的参数字节数
+#define PARAM_STORE_BYTES 90 //EEPROM保存的参数字节数
 struct KYJ_s
 {
     unsigned char nStatus; //空压机状态值：D7~D4停止标志，0001上电停止；0010停机键停止；0100空久停止；1000故障停止；
@@ -158,6 +160,13 @@ void KYJ_ExcecuteStatus(void);
 unsigned char KYJ_CheckInterface(unsigned char nInterface);
 void KYJ_SwitchToInterface(unsigned char nInterface);
 void KYJ_ExecuteInterface(void);
+void KYJ_ShowUserParam(unsigned char nParamIndex);  //显示用户参数
+void KYJ_ShowFactoryParam(unsigned char nParamIndex); //显示厂家参数
+void KYJ_ShowRegParam(unsigned char nParamIndex); //显示调整参数
+
+void KYJ_EnterParamValue(unsigned char nMI,unsigned char nPI, int nValue);
+
+void KYJ_UpdateData(void);  //更新压力、温度、电流
 
 #ifdef	__cplusplus
 }

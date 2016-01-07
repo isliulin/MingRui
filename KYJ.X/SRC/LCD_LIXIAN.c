@@ -112,6 +112,35 @@ void LcmPutChar(Uchar col,Uchar page,Uchar Order)
 	}
 	page--;					//写完一个字符page还原
 }
+//反显ASICC字符的函数
+void LcmPutCharInv(Uchar col,Uchar page,Uchar Order)
+{
+	Uchar i;
+	Uint x;
+	x = (Order-0x20)*0x10;			//ASICC字符从0x20开始,每个16 byte
+	WriteCommand(ComTable[page&0x07]|0xB0);	//Set Page Address
+	WriteCommand( ((col+1)>>4) | 0x10);	//Set Column Address High Byte
+	WriteCommand( (col+1)&0x0F );		//Low Byte  Colum from S128 -> S1 auto add
+
+
+	for(i=0;i<8;i++)
+	{
+		WriteData( ~ASCIIchardot[x] );
+		x++;
+	}
+	page++;					//下半字符page+1
+	
+	WriteCommand(ComTable[page&0x07]|0xB0);	//Set Page Address
+	WriteCommand( ((col+1)>>4) | 0x10);		//Set Column Address High Byte
+	WriteCommand( (col+1)&0x0F );			//Low Byte  Colum from S128 -> S1 auto add
+	
+	for(i=0;i<8;i++)
+	{
+		WriteData( ~ASCIIchardot[x] );
+		x++;
+	}
+	page--;					//写完一个字符page还原
+}
 
 //显示字符串的函数
 void LcmPutStr(Uchar col,Uchar page,Uchar *puts)
@@ -187,6 +216,78 @@ void LcmPutNum(unsigned char col,unsigned char page, int Num)
         //k=k+8; //右对齐
     }
     LcmPutChar(k,page,NumLeft+0x30);
+}
+
+void LcmPutFixDigit(unsigned char page,unsigned char col, int Num, unsigned char nLen, unsigned char nInvIndex)
+{
+    unsigned char i,j,k;
+    int NumLeft,b;
+    k=col;
+
+    NumLeft = Num;
+    if(Num<0)
+    {
+        LcmPutChar(k,page,'-');
+        k=k+8;
+        NumLeft = -Num;
+    }
+    for(i=nLen;i>0;i--)
+    {
+        b=NumLeft;
+        for(j=1;j<i;j++)
+        {
+            b=b/10;
+        }
+        if(i == nInvIndex)
+            LcmPutCharInv(k,page,b+0x30);
+        else
+            LcmPutChar(k,page,b+0x30);
+        k=k+8;
+        for(j=1;j<i;j++)
+        {
+        b=b*10;
+        }
+        NumLeft = NumLeft%b;
+        //k=k+8; //右对齐
+    }
+    //LcmPutChar(k,page,NumLeft+0x30);
+}
+
+void LcmPutFloatDigit(unsigned char page,unsigned char col, int Num, unsigned char nLen, unsigned char nInvIndex, unsigned char nDotIndex)
+{
+    unsigned char i,k;
+    int NumLeft,b;
+    k=col;
+
+    NumLeft = Num;
+    if(Num<0)
+    {
+        LcmPutChar(k,page,'-');
+        k=k+8;
+        NumLeft = -Num;
+    }
+    for(i=0;i<nDotIndex;i++)
+    {
+        b=NumLeft%10;
+        if((i+1) == nInvIndex)
+            LcmPutCharInv(k+8*(nLen-i),page,b+0x30);
+        else
+            LcmPutChar(k+8*(nLen-i),page,b+0x30);
+        NumLeft = NumLeft/10;
+    }
+    if(nDotIndex>0)  //显示小数点
+    {
+        LcmPutChar(k+8*(nLen-nDotIndex),page,'.');
+    }
+    for(i=nDotIndex;i<nLen;i++)
+    {
+        b=NumLeft%10;
+        if((i+1) == nInvIndex)
+            LcmPutCharInv(k+8*(nLen-1-i),page,b+0x30);
+        else
+            LcmPutChar(k+8*(nLen-1-i),page,b+0x30);
+        NumLeft = NumLeft/10;
+    }
 }
 
 void LcmPutBmp( Uchar *puts )

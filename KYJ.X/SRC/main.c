@@ -8,9 +8,10 @@
 #include "key.h"
 
 //__CONFIG (FOSC_INTOSC&WDTE_OFF &PWRTE_ON  & MCLRE_OFF& CLKOUTEN_OFF); 
-__CONFIG (FOSC_INTOSC&WDTE_OFF &PWRTE_ON  & MCLRE_ON& CLKOUTEN_OFF); 
+__CONFIG (FOSC_INTOSC&WDTE_OFF &PWRTE_OFF  & MCLRE_ON& CLKOUTEN_OFF); 
 
 char bTimer1Flag;
+char nTimer1Count;
 void IO_Config(void);
 //主函数
 void main()
@@ -28,8 +29,10 @@ void main()
 	TMR1CS0 = 0;
 	T1CKPS1 = 1;
 	T1CKPS0 = 0;
-	TMR1H = 0xD8;
-	TMR1L = 0xEF;
+	//TMR1H = 0xD8;   //10ms
+	//TMR1L = 0xEF;
+    TMR1H = 0x3C;  //50ms
+    TMR1L = 0xAF;
 	PEIE = 1;
 	GIE = 1;
 	TMR1IE = 1;
@@ -38,6 +41,7 @@ void main()
 
 //	nCount = 0;
 	bTimer1Flag = 0;
+    nTimer1Count = 0;
     IO_Config();  //初始化所有端口
     
     //初始化参数，如果已经保存到EEPROM，则读取，否则默认值初始化并保存
@@ -70,6 +74,7 @@ void main()
     DelayS(2);
     LcmClear(0x00);
     sKYJ.nInterface = 0; //设成0后会自动切换到main界面
+    sKYJ.nStatusTimeElapse = sKYJ.sUserParam.nRestartDelayTime;
     while(1)
 	{
         //检查状态
@@ -94,59 +99,18 @@ void main()
 		if(KYJ_CheckInterface(INTERFACE_PARAM)) KYJ_SwitchToInterface(INTERFACE_PARAM);
 		KYJ_ExecuteInterface();
         
-//        if((sKYJ.nStatus & STATUS_POWERSTOP) && Key_Release(KEY_START))
-//        {
-//            sKYJ.nStatus = STATUS_STARTUP;
-//            sKYJ.nInterface = INTERFACE_MAIN;
-//            sKYJ.nStatusTimeElapse = 0;
-//            LcmClear(0x00);
-//        }
-        
-
 		if(bTimer1Flag == 1)
 		{
+            KYJ_UpdateData();
+            nTimer1Count++;
+            if(nTimer1Count>20)
+            {
             sKYJ.nStatusTimeElapse++;
+            sKYJ.nInterfaceTimeElapse++;
+            nTimer1Count = 0;
+            }
 			bTimer1Flag = 0;
 		}
-        
-		//DelayS(1);
-//		RD0=!RD0;
-
-  //    LcmPutBmp(bmp1);
-		//LcmClear(0x00);
-//		for(i=(contrast-5);i<(contrast+5);i++)
-//		{
-//			WriteCommand(0x81);	//Sets V0
-//			WriteCommand(0x3F&i);	//内部电位器调节对比度
-//			LcmPutNum(10,2,i);
-//			DelayS(1);
-//		}
-		//LcmPutCChar();
-
-//		WriteCommand(0x81);		//Sets V0
-//		WriteCommand(contrast);	//恢复对比度
-        //contrast = EEPROM_Read(0x10);
-        
-                
-
-        //contrast = adc_Get_Value(CH_Pressure);
-        //contrast++;
-        //LcmPutNum(0,0,contrast);
-		//LcmPutNum(10,0,sKYJ.sRunParam.nLoadTime);
-        //EEPROM_Write(0x10,++contrast);
-        //KYJ_Param_Default();
-        //EEPROM_Save_Param(10);
-
-		//LcmClear(0xff);
-		//DelayS(1);
-		//DelayMs(100);
-//		LcmClear(0);
-//		LcmPutStr(0,0,"CA12864I2 Program");
-//		LcmPutStr(0,2,"SunSon ELEC-TECH");
-//		LcmPutStr(0,4,"TEL:755-29970110");
-//		LcmPutStr(0,6,"By LJ 2009.04.08");
-//		DelayS(1);
-
 	}
 }
 
@@ -166,8 +130,8 @@ void interrupt isr(void)
         {
 			TMR1IF = 0;
 			//TMR1IE = 0;
-			TMR1H = 0xD8;
-			TMR1L = 0xEF;
+			TMR1H = 0x3C;  //50ms
+			TMR1L = 0xAF;
 			bTimer1Flag = 1;
         }
          // Timer 2 Interrupt
