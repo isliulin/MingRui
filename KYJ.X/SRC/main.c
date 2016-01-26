@@ -8,8 +8,10 @@
 #include "key.h"
 
 //__CONFIG (FOSC_INTOSC&WDTE_OFF &PWRTE_ON  & MCLRE_OFF& CLKOUTEN_OFF); 
-__CONFIG (FOSC_INTOSC&WDTE_OFF &PWRTE_OFF  & MCLRE_ON& CLKOUTEN_OFF); 
+__CONFIG (FOSC_INTOSC&WDTE_OFF &PWRTE_OFF  & MCLRE_ON& CLKOUTEN_OFF& BOREN_ON); 
+__CONFIG(LVP_OFF&PLLEN_OFF);
 
+unsigned int nTemp;
 char bTimer1Flag;
 char nTimer1Count;
 void IO_Config(void);
@@ -38,6 +40,14 @@ void main()
 	TMR1IE = 1;
 	TMR1ON = 1;
     //定时器1配置结束并启用
+    
+    //定时器2配置，1ms
+    TMR4ON=0;
+    TMR4IE=0;
+    T4CON=0b00001010;
+    PR4=125;
+    TMR4IE=1;
+    TMR4ON=1;
 
 //	nCount = 0;
 	bTimer1Flag = 0;
@@ -55,16 +65,18 @@ void main()
         EEPROM_Save_Param(PARAM_STORE_BYTES);
         EEPROM_Write(0x10,100);
     }
-    
+    LcmInit();
     DelayMs(100);
     LcmInit();
     LED_ON;
     DelayMs(100);
-    sKYJ.nStatus = STATUS_POWERSTOP;
-    sKYJ.nStatusTimeElapse = 0;
+    KYJ_Init();
     adc_init();
+    //dac_init();
     contrast = -20;
-    
+    LED_RUN_ON;
+    LED_ERROR_ON;
+    BEEP_ON;
     //显示欢迎界面
     LcmSetSongBuff(1,2,3,4,0,0,0,0);
     LcmPutSongStr(1,30,BuffCharDot,4,0);
@@ -73,8 +85,12 @@ void main()
     LcmPutSongStr(4,20,BuffCharDot,5,0);
     DelayS(2);
     LcmClear(0x00);
-    sKYJ.nInterface = 0; //设成0后会自动切换到main界面
-    sKYJ.nStatusTimeElapse = sKYJ.sUserParam.nRestartDelayTime;
+    LED_RUN_OFF;
+    LED_ERROR_OFF;
+    BEEP_OFF;
+    
+    //sKYJ.nStatusTimeElapse = sKYJ.sUserParam.nRestartDelayTime;
+    //sKYJ.sFactoryParam.nLowTempProtect = -10;
     while(1)
 	{
         //检查状态
@@ -105,9 +121,10 @@ void main()
             nTimer1Count++;
             if(nTimer1Count>20)
             {
-            sKYJ.nStatusTimeElapse++;
-            sKYJ.nInterfaceTimeElapse++;
-            nTimer1Count = 0;
+                sKYJ.nStatusTimeElapse++;
+                if(sKYJ.nStatusTimeElapse>9999) sKYJ.nStatusTimeElapse = 9999;
+                sKYJ.nInterfaceTimeElapse++;
+                nTimer1Count = 0;
             }
 			bTimer1Flag = 0;
 		}
@@ -135,8 +152,25 @@ void interrupt isr(void)
 			bTimer1Flag = 1;
         }
          // Timer 2 Interrupt
-         //if (TMR2IF == 1 && TMR2IE == 1) 
-         //{           }
+         if (TMR4IF == 1 && TMR4IE == 1) 
+         {
+             TMR4IF = 0;
+             KYJ_SampleCurrent();
+//             nTemp++;
+//             if(nTemp<1000)
+//             {
+//                 LED_ERROR_ON;
+//             }
+//             else if(nTemp<2000)
+//             {
+//                 LED_ERROR_OFF;
+//             }
+//             else
+//             {
+//                 nTemp=0;
+//             }
+                 
+         }
          // AD Interrupt
          //if (ADIF == 1 && ADIE == 1) 
          //{           }
@@ -192,11 +226,11 @@ void IO_Config(void)
     ANSELB &=0b11111110;
     TRISB0 = 1;
  */   
-    //端口A设置；RA7 RA7 继电器开关输出；RA5压力输入；RA4相序输入；RA3RA1RA0三相电流输入
+    //端口A设置；RA7 RA7 继电器开关输出；RA5压力输入；RA4相序输入；RA3RA1RA0三相电流输入；RA6蜂鸣器；RA2温度测量基础电压DA输出
     ANSELA = 0b00101111;
-    TRISA = 0b00111111;
+    TRISA = 0b00111011;
     
-    //端口B设置；RB4 温度输入；RB0 停止开关输入；RB1，RB2，RB3 按键输入 5、6、7
+    //端口B设置；RB4 温度输入；RB0 停止开关输入；RB1，RB2，RB3 按键输入 5、6、7，RB5 RUN LED，RB6 ERROR LED
     ANSELB = 0b00010000;
     TRISB = 0b00011111;
     WPUB = 0b00001111;  //使能RB0~RB3的弱上拉

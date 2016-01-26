@@ -59,11 +59,11 @@ void LcmClear( Uchar FillData )
 void LcmInit( void )
 {
 	RES = 1;
-	DelayMs(10);
+	DelayMs(100);
 	RES = 0;
 	DelayMs(200);
 	RES = 1;
-	DelayMs(50);
+	DelayMs(100);
 
 	WriteCommand(0xAE);	//Display OFF
 	WriteCommand(0xA2);	//1/64 Duty 1/9 Bias

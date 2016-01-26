@@ -22,6 +22,7 @@
 
 void adc_init(void);
 int adc_Get_Value(unsigned char nChannel);
+//void dac_init(void);
 
 #ifdef	__cplusplus
 extern "C" {
