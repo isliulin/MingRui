@@ -142,8 +142,8 @@ struct KYJ_Password_s
 #define LED_RUN_OFF RB5=1
 #define LED_ERROR_ON RB6=0
 #define LED_ERROR_OFF RB6=1
-#define BEEP_ON RA6=1
-#define BEEP_OFF RA6=0
+#define BEEP_ON RE1=1
+#define BEEP_OFF RE1=0
 
 #define PARAM_STORE_BYTES 132 //EEPROM保存的参数字节数
 
@@ -171,10 +171,10 @@ struct KYJ_s
 extern    struct KYJ_s sKYJ;
 void KYJ_Param_Default(void);
 
-unsigned char KYJ_CheckStatus(unsigned char nStatus);
+bit KYJ_CheckStatus(unsigned char nStatus);
 void KYJ_SwitchToStatus(unsigned char nStatus);
 void KYJ_ExcecuteStatus(void);
-unsigned char KYJ_CheckInterface(unsigned char nInterface);
+bit KYJ_CheckInterface(unsigned char nInterface);
 void KYJ_SwitchToInterface(unsigned char nInterface);
 void KYJ_ExecuteInterface(void);
 void KYJ_ShowUserParam(unsigned char nParamIndex);  //显示用户参数

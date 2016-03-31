@@ -28,9 +28,9 @@ extern "C" {
 #define KEY_MOVE 6
 #define KEY_OK 7
     
-unsigned char Key_Press(unsigned char cKey);
-unsigned char Key_Release(unsigned char cKey);
-unsigned char Key_ReadKey(unsigned char cKey);
+bit Key_Press(unsigned char cKey);
+bit Key_Release(unsigned char cKey);
+bit Key_ReadKey(unsigned char cKey);
 
 #ifdef	__cplusplus
 }

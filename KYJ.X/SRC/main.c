@@ -8,22 +8,19 @@
 #include "key.h"
 
 //__CONFIG (FOSC_INTOSC&WDTE_OFF &PWRTE_ON  & MCLRE_OFF& CLKOUTEN_OFF); 
-__CONFIG (FOSC_INTOSC&WDTE_OFF &PWRTE_OFF  & MCLRE_ON& CLKOUTEN_OFF& BOREN_ON); 
+__CONFIG (FOSC_INTOSC&WDTE_ON &PWRTE_OFF  & MCLRE_ON& CLKOUTEN_OFF& BOREN_ON); 
 __CONFIG(LVP_OFF&PLLEN_OFF);
 
-unsigned int nTemp;
-char bTimer1Flag;
+//unsigned int nTemp;
+bit b50MsFlag;
+bit b1SecFlag;
 char nTimer1Count;
 void IO_Config(void);
 //主函数
 void main()
 {
-	Uchar i;
-	int contrast;			//对比度=48(根据我们常用的外部电阻参数来的)
-
-
 	OSCCON = 0x7A; //配置CPU时钟频率为16MHz
-
+   
 	//定时器1配置，10ms，源Fosc/4，再分频1:2，10ms一次中断
 	TMR1ON = 0;
 	TMR1GE = 0;
@@ -41,7 +38,7 @@ void main()
 	TMR1ON = 1;
     //定时器1配置结束并启用
     
-    //定时器2配置，1ms
+    //定时器4配置，1ms
     TMR4ON=0;
     TMR4IE=0;
     T4CON=0b00001010;
@@ -50,7 +47,8 @@ void main()
     TMR4ON=1;
 
 //	nCount = 0;
-	bTimer1Flag = 0;
+	b50MsFlag = 0;
+    b1SecFlag=0;
     nTimer1Count = 0;
     IO_Config();  //初始化所有端口
     
@@ -66,24 +64,24 @@ void main()
         EEPROM_Write(0x10,100);
     }
     LcmInit();
+    
     DelayMs(100);
     LcmInit();
     LED_ON;
-    DelayMs(100);
+//    DelayMs(100);
     KYJ_Init();
     adc_init();
-    //dac_init();
-    contrast = -20;
     LED_RUN_ON;
     LED_ERROR_ON;
-    BEEP_ON;
+    //BEEP_ON;
     //显示欢迎界面
     LcmSetSongBuff(1,2,3,4,0,0,0,0);
     LcmPutSongStr(1,30,BuffCharDot,4,0);
 
     LcmSetSongBuff(5,6,7,8,9,0,0,0);
     LcmPutSongStr(4,20,BuffCharDot,5,0);
-    DelayS(2);
+    asm("CLRWDT");
+    DelayS(1);
     LcmClear(0x00);
     LED_RUN_OFF;
     LED_ERROR_OFF;
@@ -115,19 +113,25 @@ void main()
 		if(KYJ_CheckInterface(INTERFACE_PARAM)) KYJ_SwitchToInterface(INTERFACE_PARAM);
 		KYJ_ExecuteInterface();
         
-		if(bTimer1Flag == 1)
+		if(b50MsFlag)
 		{
+            //更新压力和温度数据
             KYJ_UpdateData();
-            nTimer1Count++;
-            if(nTimer1Count>20)
-            {
-                sKYJ.nStatusTimeElapse++;
-                if(sKYJ.nStatusTimeElapse>9999) sKYJ.nStatusTimeElapse = 9999;
-                sKYJ.nInterfaceTimeElapse++;
-                nTimer1Count = 0;
-            }
-			bTimer1Flag = 0;
-		}
+            b50MsFlag = 0;
+        }
+        if(b1SecFlag)
+        {
+            asm("CLRWDT");
+            sKYJ.nStatusTimeElapse++;
+            //如果时间超过9999秒，则定格在9999秒，否则无法显示
+            if(sKYJ.nStatusTimeElapse>9999) sKYJ.nStatusTimeElapse = 9999;
+            sKYJ.nInterfaceTimeElapse++;
+            //重新初始化下端口
+//            IO_Config();
+            b1SecFlag=0;
+        }
+
+		
 	}
 }
 
@@ -149,7 +153,13 @@ void interrupt isr(void)
 			//TMR1IE = 0;
 			TMR1H = 0x3C;  //50ms
 			TMR1L = 0xAF;
-			bTimer1Flag = 1;
+			b50MsFlag = 1;
+            nTimer1Count++;
+            if(nTimer1Count>20)
+            {
+                b1SecFlag=1;
+                nTimer1Count=0;
+            }
         }
          // Timer 2 Interrupt
          if (TMR4IF == 1 && TMR4IE == 1) 
@@ -177,7 +187,7 @@ void interrupt isr(void)
 		
 		//串口中断
 }
-
+/*
 void LCD_Init()
 {
 //RC3: CLK
@@ -203,29 +213,9 @@ SSPEN = 1; //使能SPI
 
 
 }
-
+*/
 void IO_Config(void)
 {
-/*
-    //LCD背景灯光
-	ANSELE = 0x00;
-	TRISE0 = 0;
-    RE0=1;
-    //LCD端口配置
-    ANSELD &= 0b11111000;
-    TRISC3 = 0;
-    TRISC4 = 0;
-    TRISC5 = 0;
-    TRISD0 = 0;
-    TRISD1 = 0;
-    TRISD2 = 0;
-    
-    //开关输入，RE2远程开关，RB0停止开关
-    ANSELE &= 0b11111011;
-    TRISE2 = 1;
-    ANSELB &=0b11111110;
-    TRISB0 = 1;
- */   
     //端口A设置；RA7 RA7 继电器开关输出；RA5压力输入；RA4相序输入；RA3RA1RA0三相电流输入；RA6蜂鸣器；RA2温度测量基础电压DA输出
     ANSELA = 0b00101111;
     TRISA = 0b00111011;
@@ -243,7 +233,7 @@ void IO_Config(void)
     ANSELD = 0b00000000;
     TRISD = 0b11111000;
     
-    //端口E设置：RE0 LCD背光输出；RE2 远程开关输入
+    //端口E设置：RE0 LCD背光输出；RE2 远程开关输入，RE1 蜂鸣器输出
     ANSELE = 0b00000000;
-    TRISE = 0b11111110;
+    TRISE = 0b11111100;
 }

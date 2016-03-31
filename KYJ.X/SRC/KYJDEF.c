@@ -6,7 +6,7 @@
 #include "EEPROM.h"
 
 struct KYJ_s sKYJ;
-unsigned char nRefreshInterface;
+bit bRefreshInterface;
 unsigned char nMenuIndex;  //当前菜单序号  1-运行参数；2-用户参数；3-厂家参数；4-注册参数；5-用户密码
 unsigned char nParamIndex;   //当前参数序号
 unsigned char nDigitIndex; //当前数位
@@ -15,6 +15,8 @@ int nParamValue;
 unsigned int nCurrent;  //电流采样累加值
 unsigned char nCurrentSampleCount;  //电流采样次数，1ms采样一次，每20ms（对应50Hz）计算平均值
 unsigned long nLongTemp;
+
+bit nRet;
 void KYJ_Init(void)
 {
     nCurrent=0;
@@ -109,10 +111,9 @@ void KYJ_Param_Default(void)
     sKYJ.sPassword.nSuperPass = 5555;//厂家超级密码
 }
 
-unsigned char KYJ_CheckStatus(unsigned char nStatus)
+bit KYJ_CheckStatus(unsigned char nStatus)
 {
     int nCurrentMax,nCurrentMin;
-    unsigned char nRet;
     nRet = 0;
     switch(nStatus)
     {
@@ -128,24 +129,29 @@ unsigned char KYJ_CheckStatus(unsigned char nStatus)
             
             //if(sKYJ.nStatus !=STATUS_FAULTSTOP)
             //缺相检测
-                if((sKYJ.nFaultFlag&0x01) == 0 && !RA4) {sKYJ.nFaultFlag |= 0x01;nRet=1;}
+                if(!(sKYJ.nFaultFlag&0x01) && !RA4) {sKYJ.nFaultFlag |= 0x01;nRet=0;}
                 else if(RA4) sKYJ.nFaultFlag &= 0xFE;
             //电流不平衡检测
                 nCurrentMax = max(sKYJ.nCurrentA,sKYJ.nCurrentB);
                 nCurrentMax = max(nCurrentMax,sKYJ.nCurrentC);
                 nCurrentMin = min(sKYJ.nCurrentA,sKYJ.nCurrentB);
                 nCurrentMin = min(nCurrentMin,sKYJ.nCurrentC);                
-                if(sKYJ.nStatusTimeElapse>2 && sKYJ.nFaultFlag&0x02 == 0)
+                if(sKYJ.nStatusTimeElapse>2 && !(sKYJ.nFaultFlag&0x02))
                 {
-                if(nCurrentMax > (nCurrentMin*(10+sKYJ.sFactoryParam.nCurrentNotBalance)/10)) nRet=1;
+                if(nCurrentMax > (nCurrentMin*(10+sKYJ.sFactoryParam.nCurrentNotBalance)/10)) nRet=0;
                 }
                 
                 //过热检测
-                if(!(sKYJ.nFaultFlag&0x04) && sKYJ.nTemperature > (int)sKYJ.sFactoryParam.nStopTemp) {sKYJ.nFaultFlag |= 0x04; nRet=1;}
+                if(!(sKYJ.nFaultFlag&0x04) && sKYJ.nTemperature > (int)sKYJ.sFactoryParam.nStopTemp) {sKYJ.nFaultFlag |= 0x04; nRet=0;}
                 
                 //超压检测
-                if(!(sKYJ.nFaultFlag&0x08) && sKYJ.sRunParam.nPressure > sKYJ.sFactoryParam.nStopPress){sKYJ.nFaultFlag | =0x08;nRet=1;}
+                if(!(sKYJ.nFaultFlag&0x08) && sKYJ.sRunParam.nPressure > sKYJ.sFactoryParam.nStopPress){sKYJ.nFaultFlag | =0x08;nRet=0;}
                 
+                //低温保护
+                if(!(sKYJ.nFaultFlag&0x10) && sKYJ.nTemperature < - sKYJ.sFactoryParam.nLowTempProtect) {sKYJ.nFaultFlag |=0x10;nRet=0;}
+                
+                //过载保护
+                if(!(sKYJ.nFaultFlag&0x20) && sKYJ.nStatusTimeElapse>1 && nCurrentMax > sKYJ.sFactoryParam.nMainMotorNormalCurrent) {sKYJ.nFaultFlag |=0x20;nRet=0;}
     
         
             break;
@@ -180,9 +186,10 @@ void KYJ_SwitchToStatus(unsigned char nStatus)
     {
         case STATUS_FAULTSTOP:
             LED_ERROR_ON;
+            LED_ERROR_ON; //给两次就能点亮？
             //break;
         case STATUS_POWERSTOP:
-            LED_RUN_OFF;
+            //LED_RUN_OFF;
             //break;
         case STATUS_KEYSTOP:
             LED_RUN_OFF;
@@ -194,7 +201,7 @@ void KYJ_SwitchToStatus(unsigned char nStatus)
         case STATUS_STARTUP:
             LED_RUN_ON;
             MOTOR_SW_ON;
-            sKYJ.nFaultFlag=0;
+            sKYJ.nFaultFlag=0;  //错误标志清零
             LED_ERROR_OFF;
             break;
         case STATUS_LOAD:
@@ -244,9 +251,8 @@ void KYJ_ExcecuteStatus(void)
     return;      
 }
 
-unsigned char KYJ_CheckInterface(unsigned char nInterface)
+bit KYJ_CheckInterface(unsigned char nInterface)
 {
-    unsigned char nRet;
     nRet = 0;
     switch(nInterface)
     {
@@ -341,14 +347,14 @@ void KYJ_SwitchToInterface(unsigned char nInterface)
     }
     sKYJ.nInterface = nInterface;
     sKYJ.nInterfaceTimeElapse = 0;
-    nRefreshInterface = 1;
+    bRefreshInterface = 1;
 
     return;      
 }
 
 void KYJ_ExecuteInterface(void)
 {
-    int nValue;
+//    int nValue;
     //float fFactor;
     char tempValue[4];
     //如果有按键按下，则界面流逝归零
@@ -409,15 +415,15 @@ void KYJ_ExecuteInterface(void)
             {
                 nMenuIndex++;
                 if(nMenuIndex> 5) nMenuIndex = 1;
-                nRefreshInterface = 1;
+                bRefreshInterface = 1;
             }
             else if(Key_Release(KEY_UP))
             {
                 nMenuIndex--;
                 if(nMenuIndex<1) nMenuIndex = 5;
-                nRefreshInterface = 1;
+                bRefreshInterface = 1;
             }
-            if(nRefreshInterface)
+            if(bRefreshInterface)
             {
                 if(nMenuIndex < 5)  //显示第1-4项
                 {
@@ -446,15 +452,15 @@ void KYJ_ExecuteInterface(void)
             {
                 nParamIndex++;
                 if(nParamIndex> 4) nParamIndex = 1;
-                nRefreshInterface = 1;
+                bRefreshInterface = 1;
             }
             else if(Key_Release(KEY_UP))
             {
                 nParamIndex--;
                 if(nParamIndex<1) nParamIndex = 4;
-                nRefreshInterface = 1;
+                bRefreshInterface = 1;
             }
-            if(nRefreshInterface)
+            if(bRefreshInterface)
             {
                 LcmClear(0x00);
                 switch(nParamIndex)
@@ -547,15 +553,15 @@ void KYJ_ExecuteInterface(void)
             {
                 nParamIndex++;
                 if(nParamIndex> 9) nParamIndex = 1;
-                nRefreshInterface = 1;
+                bRefreshInterface = 1;
             }
             else if(Key_Release(KEY_UP))
             {
                 nParamIndex--;
                 if(nParamIndex<1) nParamIndex = 9;
-                nRefreshInterface = 1;
+                bRefreshInterface = 1;
             }
-            if(nRefreshInterface)
+            if(bRefreshInterface)
             {
                 LcmClear(0x00);
                 KYJ_ShowUserParam(nParamIndex);
@@ -566,15 +572,15 @@ void KYJ_ExecuteInterface(void)
             {
                 nParamIndex++;
                 if(nParamIndex> 9) nParamIndex = 1;
-                nRefreshInterface = 1;
+                bRefreshInterface = 1;
             }
             else if(Key_Release(KEY_UP))
             {
                 nParamIndex--;
                 if(nParamIndex<1) nParamIndex = 9;
-                nRefreshInterface = 1;
+                bRefreshInterface = 1;
             }
-            if(nRefreshInterface)
+            if(bRefreshInterface)
             {
                 LcmClear(0x00);
                 KYJ_ShowFactoryParam(nParamIndex);
@@ -585,15 +591,15 @@ void KYJ_ExecuteInterface(void)
             {
                 nParamIndex++;
                 if(nParamIndex> 5) nParamIndex = 1;
-                nRefreshInterface = 1;
+                bRefreshInterface = 1;
             }
             else if(Key_Release(KEY_UP))
             {
                 nParamIndex--;
                 if(nParamIndex<1) nParamIndex = 5;
-                nRefreshInterface = 1;
+                bRefreshInterface = 1;
             }
-            if(nRefreshInterface)
+            if(bRefreshInterface)
             {
                 LcmClear(0x00);
                 KYJ_ShowRegParam(nParamIndex);
@@ -655,7 +661,7 @@ void KYJ_ExecuteInterface(void)
             break;
     }
     
-    nRefreshInterface = 0;
+    bRefreshInterface = 0;
     return;      
 }
 
