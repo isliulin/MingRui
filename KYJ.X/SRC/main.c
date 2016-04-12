@@ -1,5 +1,4 @@
-#include<pic.h>
-#include<pic16f1939.h>
+#include <xc.h>
 #include "delay.h"
 #include "LCD_LIXIAN.h"
 #include "EEPROM.h"
@@ -7,26 +6,22 @@
 #include "adc.h"
 #include "key.h"
 
-//__CONFIG (FOSC_INTOSC&WDTE_OFF &PWRTE_ON  & MCLRE_OFF& CLKOUTEN_OFF); 
-__CONFIG (FOSC_INTOSC&WDTE_ON &PWRTE_OFF  & MCLRE_ON& CLKOUTEN_OFF& BOREN_ON); 
-__CONFIG(LVP_OFF&PLLEN_OFF);
-
-//unsigned int nTemp;
+#pragma config XINST = OFF // turn on watchdog timer
 bit b50MsFlag;
 bit b1SecFlag;
 char nTimer1Count;
+//int nTemp;
 void IO_Config(void);
-//主函数
-void main()
+
+int main(void)
 {
-	OSCCON = 0x7A; //配置CPU时钟频率为16MHz
-   
+    OSCCON = 0xF2; //配置CPU时钟频率为16MHz
+    
 	//定时器1配置，10ms，源Fosc/4，再分频1:2，10ms一次中断
 	TMR1ON = 0;
-	TMR1GE = 0;
-	TMR1CS1 = 0;
-	TMR1CS0 = 0;
-	T1CKPS1 = 1;
+	//TMR1GE = 0;
+	TMR1CS = 0; //内部时钟Fosc/4
+	T1CKPS1 = 1; //1：4预分频比
 	T1CKPS0 = 0;
 	//TMR1H = 0xD8;   //10ms
 	//TMR1L = 0xEF;
@@ -38,13 +33,13 @@ void main()
 	TMR1ON = 1;
     //定时器1配置结束并启用
     
-    //定时器4配置，1ms
-    TMR4ON=0;
-    TMR4IE=0;
-    T4CON=0b00001010;
-    PR4=125;
-    TMR4IE=1;
-    TMR4ON=1;
+    //定时器2配置，1ms
+    TMR2ON=0;
+    TMR2IE=0;
+    T2CON=0b00000010;
+    PR2=125;
+    TMR2IE=1;
+    TMR2ON=1;
 
 //	nCount = 0;
 	b50MsFlag = 0;
@@ -135,7 +130,6 @@ void main()
 	}
 }
 
-
 //中断处理程序
 void interrupt isr(void) 
 {
@@ -162,18 +156,21 @@ void interrupt isr(void)
             }
         }
          // Timer 2 Interrupt
-         if (TMR4IF == 1 && TMR4IE == 1) 
+         if (TMR2IF == 1 && TMR2IE == 1) 
          {
-             TMR4IF = 0;
-             KYJ_SampleCurrent();
+             TMR2IF = 0;
+ //            KYJ_SampleCurrent();  //采样一次电流值
+             RD2=!RD2;
 //             nTemp++;
 //             if(nTemp<1000)
 //             {
-//                 LED_ERROR_ON;
+//                 //LED_ERROR_ON;
+//                 RE0=0;
 //             }
 //             else if(nTemp<2000)
 //             {
-//                 LED_ERROR_OFF;
+//                 //LED_ERROR_OFF;
+//                 RE0=1;
 //             }
 //             else
 //             {
@@ -187,53 +184,31 @@ void interrupt isr(void)
 		
 		//串口中断
 }
-/*
-void LCD_Init()
-{
-//RC3: CLK
-//RD0: ADR
-//RD1: RES
-//RD2: CS
-//RC4: DAT
-SSPEN = 0; //禁止SPI
-ANSELD &= 0b11111000;
-TRISC3 = 0;
-TRISC4 = 0;
-TRISD0 = 0;
-TRISD1 = 0;
-TRISD2 = 0;
 
-CKP= 1;
-SSPM0 = 0;
-SSPM1 = 0;
-SSPM2 = 0;
-SSPM3 = 0;
-
-SSPEN = 1; //使能SPI
-
-
-}
-*/
 void IO_Config(void)
 {
     //端口A设置；RA7 RA7 继电器开关输出；RA5压力输入；RA4相序输入；RA3RA1RA0三相电流输入；RA6蜂鸣器；RA2温度测量基础电压DA输出
-    ANSELA = 0b00101111;
+//    ANCON0 = 0b0011111; //AN0-AN4
+    ANSEL = 0b00011111; //ANS0-ANS4，对应RA0,RA1,RA2,RA3,RA5
     TRISA = 0b00111011;
     
     //端口B设置；RB4 温度输入；RB0 停止开关输入；RB1，RB2，RB3 按键输入 5、6、7，RB5 RUN LED，RB6 ERROR LED
-    ANSELB = 0b00010000;
+    //RUN LED 从 RB5改为RB6；ERR LED从RB6改为RB7。但是RB6，RB7为调试口，暂时先不用，RB5改为输入电压模拟量输入
+//    ANCON1 = 0b00000010;  //AN9 
+    ANSELH = 0b00001000; //ANS11，对应RB4端口
     TRISB = 0b00011111;
     WPUB = 0b00001111;  //使能RB0~RB3的弱上拉
-    OPTION_REG &= 0b01111111; //使能弱上拉功能
+    RBPU = 0;  //使能弱上拉功能
     
     //端口C设置：RC5 DAT输出；RC3 CLK输出；RC2 继电器开关输出
     TRISC = 0b11010011;
     
     //端口D设置：RD0：ADR输出；	RD1：RES输出；	RD2：CS 输出； RD4-7 键盘输入1、2、3、4
-    ANSELD = 0b00000000;
+//    ANCON1 |= 0b00000000;
     TRISD = 0b11111000;
+//    RDPU = 1; //使能PORTD弱上拉功能
+    //46K20 Port D 没有弱上拉功能
     
     //端口E设置：RE0 LCD背光输出；RE2 远程开关输入，RE1 蜂鸣器输出
-    ANSELE = 0b00000000;
     TRISE = 0b11111100;
 }

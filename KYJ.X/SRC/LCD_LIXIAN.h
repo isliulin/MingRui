@@ -1,13 +1,12 @@
 #ifndef	__LCD_LIXIAN_h__
 #define	__LCD_LIXIAN_h__
-#include<pic.h>
-#include<pic16f1939.h>
+#include <xc.h>
 //#include <intrins.h>
-#define  CS RD2
-#define  RS RD0
-#define RES RD1
-#define  SCK RC3
-#define SID RC5
+#define  CS PORTDbits.RD2
+#define  RS PORTDbits.RD0
+#define RES PORTDbits.RD1
+#define  SCK PORTCbits.RC3
+#define SID PORTCbits.RC5
 
 #define	LcmXPixel 128	//横向宽度
 #define	LcmYPixel 64	//纵向高度
@@ -17,7 +16,7 @@
 #define code const
 
 
-Uchar code ASCIIchardot[];
+//Uchar code ASCIIchardot[];
 unsigned char BuffCharDot[8];
 //Uchar code bmp1[];
 //Uchar code bmp2[];
@@ -665,7 +664,7 @@ unsigned char code ASCIIchardot[16*96] = {
 
 /*--  文字:    --*/
 /*--  Fixedsys12;  此字体下对应的点阵为：宽x高=8x16   --*/
-0x00,0x1F,0x1F,0x1F,0x1F,0x1F,0x1F,0x00,0x00,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0x00,
+0x00,0x1F,0x1F,0x1F,0x1F,0x1F,0x1F,0x00,0x00,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0x00
 };
 
 

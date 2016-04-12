@@ -1,6 +1,5 @@
 #include "key.h"
 #include "delay.h"
-#include<pic16f1939.h>
 bit Key_Press(unsigned char cKey)
 {
     if(Key_ReadKey(cKey) == 0)

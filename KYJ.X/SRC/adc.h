@@ -7,6 +7,7 @@
 
 #ifndef ADC_H
 #define	ADC_H
+#include <xc.h>
 
 #define Pressure_adc_pin RA5  //AN4
 #define Temperature_adc_pin RB4 //AN11
@@ -15,7 +16,7 @@
 #define CurrentC_adc_pin RA3  //AN3
 
 #define CH_Pressure 4  //AN4
-#define CH_Temperature 11 //AN11
+#define CH_Temperature 9 //AN9
 #define CH_CurrentA 0  //AN0
 #define CH_CurrentB 1  //AN1
 #define CH_CurrentC 3  //AN3

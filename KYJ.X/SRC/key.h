@@ -7,18 +7,19 @@
 
 #ifndef KEY_H
 #define	KEY_H
+#include <xc.h>
 
 #ifdef	__cplusplus
 extern "C" {
 #endif
 
-#define KEY_START_PIN RD4
-#define KEY_STOP_PIN RD5
-#define KEY_RESET_PIN RD6
-#define KEY_DOWN_PIN RB3
-#define KEY_UP_PIN RB1
-#define KEY_MOVE_PIN RD7
-#define KEY_OK_PIN RB2
+#define KEY_START_PIN PORTDbits.RD4
+#define KEY_STOP_PIN PORTDbits.RD5
+#define KEY_RESET_PIN PORTDbits.RD6
+#define KEY_DOWN_PIN PORTBbits.RB3
+#define KEY_UP_PIN PORTBbits.RB1
+#define KEY_MOVE_PIN PORTDbits.RD7
+#define KEY_OK_PIN PORTBbits.RB2
 
 #define KEY_START 1
 #define KEY_STOP 2

@@ -7,7 +7,7 @@
 
 #ifndef KYJDEF_H
 #define	KYJDEF_H
-
+#include <xc.h>
 #ifdef	__cplusplus
 extern "C" {
 #endif
@@ -56,6 +56,7 @@ struct KYJ_UserParam_s
     unsigned int nOil2PresetTime; //润滑油时间预置
     unsigned int nOil3PresetTime; //润滑脂时间预置
     unsigned int nBeltPresetTime; //皮带时间预置
+    unsigned char nStartType; //启动方式：0为直接启动，1为星角启动
     unsigned char nLanguage;//中文/英文
     unsigned int nPassword;//修改用户密码
 };
@@ -129,21 +130,21 @@ struct KYJ_Password_s
 #define INTERFACE_PASSWORD 0x07
 #define INTERFACE_PARAM 0x08
 
-#define LED_ON RE0=1
-#define LED_OFF RE0=0
-#define MOTOR_SW_ON RC2=1
-#define MOTOR_SW_OFF RC2=0
-#define LOAD_SW_ON RA6=1
-#define LOAD_SW_OFF RA6=0
-#define FAN_SW_ON RA7=1
-#define FAN_SW_OFF RA7=0
+#define LED_ON PORTEbits.RE0=1  //LCD背光
+#define LED_OFF PORTEbits.RE0=0
+#define MOTOR_SW_ON PORTCbits.RC2=1  //主机继电器
+#define MOTOR_SW_OFF PORTCbits.RC2=0
+#define LOAD_SW_ON PORTAbits.RA6=1  //加载阀继电器
+#define LOAD_SW_OFF PORTAbits.RA6=0
+#define FAN_SW_ON PORTAbits.RA7=1  //风扇继电器
+#define FAN_SW_OFF PORTAbits.RA7=0
 
-#define LED_RUN_ON RB5=0
-#define LED_RUN_OFF RB5=1
-#define LED_ERROR_ON RB6=0
-#define LED_ERROR_OFF RB6=1
-#define BEEP_ON RE1=1
-#define BEEP_OFF RE1=0
+#define LED_RUN_ON PORTBbits.RB5=0  //运行指示灯
+#define LED_RUN_OFF PORTBbits.RB5=1
+#define LED_ERROR_ON PORTBbits.RB6=0 //故障指示灯
+#define LED_ERROR_OFF PORTBbits.RB6=1
+#define BEEP_ON PORTEbits.RE1=1  //蜂鸣器开关
+#define BEEP_OFF PORTEbits.RE1=0
 
 #define PARAM_STORE_BYTES 132 //EEPROM保存的参数字节数
 
@@ -157,11 +158,12 @@ struct KYJ_s
     unsigned char nInterface; //显示的界面
     unsigned int nStatusTimeElapse;  //进入某一状态后的时间持续值，单位：秒
     unsigned char nInterfaceTimeElapse;
-    unsigned char nFaultFlag;//故障标志，D0 缺相；D1 电流不平衡；D2 过热停机；D3 超压停机
+    unsigned int nFaultFlag;//故障标志，D0 缺相；D1 电流不平衡；D2 过热停机；D3 超压停机；D4低温保护；D5过载保护；D6电源电压保护；D7压力传感器故障；D8温度传感器故障
     unsigned int nCurrentA;  //计算后的电流
     unsigned int nCurrentB;
     unsigned int nCurrentC;
     int nTemperature; //计算后的温度
+    unsigned char nVoltage; //电源电压
     struct KYJ_RunParam_s sRunParam;
     struct KYJ_UserParam_s sUserParam;
     struct KYJ_FactoryParam_s sFactoryParam;

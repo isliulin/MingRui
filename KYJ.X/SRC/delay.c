@@ -14,7 +14,7 @@ For Microchip 12C67x, 16C7x, 16F87x and Hi-Tech C
 #ifndef __DELAY_C
 #define __DELAY_C
 
-#include <pic.h>
+#include <xc.h>
 #include	"always.h"
 
 unsigned char delayus_variable;
