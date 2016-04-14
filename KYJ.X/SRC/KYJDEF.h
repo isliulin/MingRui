@@ -22,14 +22,17 @@ struct KYJ_RunParam_s
     int nTemperature; //温度采样值
     unsigned long nTotalTime; //运行总时间，单位：小时
     unsigned long nLoadTime; //负载总时间：单位：小时
-    //unsigned char nFaultFlag; //故障标志，D0 缺相；D1 电流不平衡；D2 过热停机；D3 超压停机
+    unsigned int nVoltage; //电源电压，单位：伏特
 };
 
 struct KYJ_UserParam_s
 {
+    unsigned int nLoadPress; //加载压力，单位：00.01MPa
+    unsigned int nUnLoadPress; //卸载压力
     unsigned int nFanStartTemp; //风机启温度
     unsigned int nFanStopTemp; //风机停温度
     unsigned int nMCUDelayTime; //主机延时时间，单位：秒
+    unsigned char nSADelayTime; //星角延时时间，单位：秒
     unsigned int nLoadDelayTime; //加载延时时间，单位：秒
     unsigned int nNoLoadDelayTime; //空载延时时间
     unsigned int nStopDelayTime; //停机延时时间
@@ -56,7 +59,6 @@ struct KYJ_UserParam_s
     unsigned int nOil2PresetTime; //润滑油时间预置
     unsigned int nOil3PresetTime; //润滑脂时间预置
     unsigned int nBeltPresetTime; //皮带时间预置
-    unsigned char nStartType; //启动方式：0为直接启动，1为星角启动
     unsigned char nLanguage;//中文/英文
     unsigned int nPassword;//修改用户密码
 };
@@ -69,7 +71,7 @@ struct KYJ_FactoryParam_s
     unsigned int nUnloadPressLimit; //卸载压力高限
     unsigned long nTotalRunTime; //运行总时间
     unsigned long nTotalLoadTime; //负载总时间
-    unsigned char nHistoryFaultRest; //历史故障复位
+    unsigned int nHistoryFaultRest; //历史故障复位
     unsigned int nCurrentNotBalance; //电流不平衡度
     unsigned int nNoPhaseProtectTime; //断相保护时间
     unsigned int nProductDate; //出厂日期
@@ -82,6 +84,7 @@ struct KYJ_FactoryParam_s
     unsigned int nWarningOverTime;//预警过久停机
     unsigned char nCommParam;//通信预置参数
     //unsigned char nParam1;//参数1
+    unsigned char nStartType; //启动方式：0为直接启动，1为星角启动
 
 };
 
@@ -97,9 +100,12 @@ struct KYJ_RegParam_s
     unsigned int nStandCurrentCFactor;//系数
     unsigned int nCurrentC;//现行电流
     unsigned int nStandTemp;//标准温度
-    unsigned int nStandTempFactor;//系数, 0.01
+    unsigned int nStandTempFactor;//系数, 0.001
     unsigned int nZeroBias;//零点
     int nTemp;//现行温度
+    unsigned int nStandVoltage; //标准电压
+    unsigned int nVoltage; //现行电压
+    unsigned int nStandVoltageFactor; //电压系数,0.001
     unsigned char nCurrMode;//CURR MODE
 };
 struct KYJ_Password_s
@@ -139,14 +145,14 @@ struct KYJ_Password_s
 #define FAN_SW_ON PORTAbits.RA7=1  //风扇继电器
 #define FAN_SW_OFF PORTAbits.RA7=0
 
-#define LED_RUN_ON PORTBbits.RB5=0  //运行指示灯
-#define LED_RUN_OFF PORTBbits.RB5=1
-#define LED_ERROR_ON PORTBbits.RB6=0 //故障指示灯
-#define LED_ERROR_OFF PORTBbits.RB6=1
+#define LED_RUN_ON PORTBbits.RB6=0  //运行指示灯
+#define LED_RUN_OFF PORTBbits.RB6=1
+#define LED_ERROR_ON PORTBbits.RB7=0 //故障指示灯
+#define LED_ERROR_OFF PORTBbits.RB7=1
 #define BEEP_ON PORTEbits.RE1=1  //蜂鸣器开关
 #define BEEP_OFF PORTEbits.RE1=0
 
-#define PARAM_STORE_BYTES 132 //EEPROM保存的参数字节数
+#define PARAM_STORE_BYTES 0x01B4-0x0110+1 //EEPROM保存的参数字节数
 
 #define max(x,y) (x)>(y)?(x):(y);
 #define min(x,y) (x)<(y)?(x):(y);

@@ -16,7 +16,7 @@ extern "C" {
 #define KEY_START_PIN PORTDbits.RD4
 #define KEY_STOP_PIN PORTDbits.RD5
 #define KEY_RESET_PIN PORTDbits.RD6
-#define KEY_DOWN_PIN PORTBbits.RB3
+#define KEY_DOWN_PIN PORTBbits.RB5
 #define KEY_UP_PIN PORTBbits.RB1
 #define KEY_MOVE_PIN PORTDbits.RD7
 #define KEY_OK_PIN PORTBbits.RB2

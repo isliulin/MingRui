@@ -32,6 +32,8 @@ void KYJ_Init(void)
 }
 void KYJ_Param_Default(void)
 {
+    sKYJ.sUserParam.nLoadPress = 70;//加载压力
+    sKYJ.sUserParam.nUnLoadPress = 90;//卸载压力
     sKYJ.sUserParam.nFanStartTemp = 80; //风机启温度
     sKYJ.sUserParam.nFanStopTemp = 70;//风机停温度
     sKYJ.sUserParam.nMCUDelayTime = 8; //主机延时时间，单位：秒
@@ -61,7 +63,6 @@ void KYJ_Param_Default(void)
     sKYJ.sUserParam.nOil2PresetTime = 0; //润滑油时间预置
     sKYJ.sUserParam.nOil3PresetTime = 0; //润滑脂时间预置
     sKYJ.sUserParam.nBeltPresetTime = 0; //皮带时间预置
-    sKYJ.sUserParam.nStartType = 0;  //默认直接启动
     sKYJ.sUserParam.nLanguage = 1;//中文/英文
     sKYJ.sUserParam.nPassword = 0000;//修改用户密码
     
@@ -86,7 +87,7 @@ void KYJ_Param_Default(void)
     sKYJ.sFactoryParam.nWarningOverTime = 10;//预警过久停机
     sKYJ.sFactoryParam.nCommParam = 0;//通信预置参数
     //sKYJ.sFactoryParam.nParam1 = 0;//参数1
-    
+     sKYJ.sFactoryParam.nStartType = 0;  //默认直接启动   
     
     sKYJ.sRegParam.nStandCurrentA = 0;//标准电流
     sKYJ.sRegParam.nStandCurrentAFactor = 1;//系数
@@ -101,6 +102,9 @@ void KYJ_Param_Default(void)
     sKYJ.sRegParam.nStandTempFactor = 0;//系数
     sKYJ.sRegParam.nZeroBias = 0;//零点
     sKYJ.sRegParam.nTemp = 0;//现行温度
+    sKYJ.sRegParam.nStandVoltage = 220; //标准电压
+    sKYJ.sRegParam.nVoltage = 0; //现行电压
+    sKYJ.sRegParam.nStandVoltageFactor = 1000; //电压系数,0.001
     sKYJ.sRegParam.nCurrMode = 0;//CURR MODE
 
     sKYJ.sPassword.nOpPass = 0000; //操作密码
@@ -202,20 +206,20 @@ bit KYJ_CheckStatus(unsigned char nStatus)
             if(sKYJ.nFaultFlag == 0)  //有错误时，不能直接启动，必须按OK键先清除错误；没错误时，可以启动
             {
                 if(Key_Release(KEY_START) && sKYJ.nStatusTimeElapse>sKYJ.sUserParam.nRestartDelayTime) nRet = 1;
-                if(sKYJ.nStatus == STATUS_DELAYSTOP && sKYJ.sRunParam.nPressure < sKYJ.sUserParam.nSlaveLoadPress) nRet=1;
+                if(sKYJ.nStatus == STATUS_DELAYSTOP && sKYJ.sRunParam.nPressure < sKYJ.sUserParam.nLoadPress) nRet=1;
             }
             break;
         case STATUS_LOAD:
             if(sKYJ.nStatus & (STATUS_STARTUP | STATUS_UNLOAD))
             {
-                if((sKYJ.nStatusTimeElapse > sKYJ.sUserParam.nLoadDelayTime) && (sKYJ.sRunParam.nPressure < sKYJ.sUserParam.nSlaveLoadPress)) nRet = 1;           
+                if((sKYJ.nStatusTimeElapse > sKYJ.sUserParam.nLoadDelayTime) && (sKYJ.sRunParam.nPressure < sKYJ.sUserParam.nLoadPress)) nRet = 1;           
             }
             break;
         case STATUS_UNLOAD:
-            if(sKYJ.nStatus == STATUS_LOAD && sKYJ.sRunParam.nPressure > sKYJ.sUserParam.nSlaveUnLoadPress) nRet = 1;
+            if(sKYJ.nStatus == STATUS_LOAD && sKYJ.sRunParam.nPressure > sKYJ.sUserParam.nUnLoadPress) nRet = 1;
             if(sKYJ.nStatus == STATUS_STARTUP)
             {
-                if((sKYJ.nStatusTimeElapse > sKYJ.sUserParam.nLoadDelayTime) && (sKYJ.sRunParam.nPressure >= sKYJ.sUserParam.nSlaveLoadPress)) nRet = 1;           
+                if((sKYJ.nStatusTimeElapse > sKYJ.sUserParam.nLoadDelayTime) && (sKYJ.sRunParam.nPressure >= sKYJ.sUserParam.nLoadPress)) nRet = 1;           
             }
             break;
         case STATUS_MANUAL:
@@ -247,7 +251,7 @@ void KYJ_SwitchToStatus(unsigned char nStatus)
         case STATUS_STARTUP:
             LED_RUN_ON;
             
-            if(sKYJ.sUserParam.nStartType == 1) //星角启动
+            if(sKYJ.sFactoryParam.nStartType == 1) //星角启动
             {
                 MOTOR_SW_ON;  //直接启动
             }
@@ -291,7 +295,7 @@ void KYJ_ExcecuteStatus(void)
             if(Key_Press(KEY_OK)) sKYJ.nFaultFlag=0;  //按下OK键，则错误标志清零。
             break;
         case STATUS_STARTUP:
-            if(sKYJ.sUserParam.nStartType == 1) //星角启动
+            if(sKYJ.sFactoryParam.nStartType == 1) //星角启动
             {
                 MOTOR_SW_ON;  //直接启动
             }
@@ -556,13 +560,13 @@ void KYJ_ExecuteInterface(void)
             if(Key_Release(KEY_DOWN))
             {
                 nParamIndex++;
-                if(nParamIndex> 4) nParamIndex = 1;
+                if(nParamIndex> 5) nParamIndex = 1;
                 bRefreshInterface = 1;
             }
             else if(Key_Release(KEY_UP))
             {
                 nParamIndex--;
-                if(nParamIndex<1) nParamIndex = 4;
+                if(nParamIndex<1) nParamIndex = 5;
                 bRefreshInterface = 1;
             }
             if(bRefreshInterface)
@@ -599,6 +603,13 @@ void KYJ_ExecuteInterface(void)
                         
                         LcmSetSongBuff(119,33,0,0,0,0,0,0); //小时
                         LcmPutSongStr(4,96,BuffCharDot,2,0);                        
+                        break;
+                    case 5:
+                        
+                        LcmSetSongBuff(83,79,79,7,0,0,0,0); //供电电压
+                        LcmPutSongStr(1,0,BuffCharDot,4,0);
+                        
+                        LcmPutStr(96,4,(unsigned char *) "V");                        
                         break;
                     default:
                         break;
@@ -648,6 +659,9 @@ void KYJ_ExecuteInterface(void)
 //                        LcmPutSongStr(4,96,BuffCharDot,2,0);        
                         LcmPutFixDigit(4,8,sKYJ.sRunParam.nLoadTime/10000,4,0);
                         LcmPutFixDigit(4,40,sKYJ.sRunParam.nLoadTime%10000,4,0);
+                        break;
+                    case 5:
+                        LcmPutFixDigit(4,40,sKYJ.nVoltage,4,0);
                         break;
                     default:
                         break;
@@ -836,7 +850,7 @@ void KYJ_ShowUserParam(unsigned char nParamIndex)
                     case 8:
                         LcmSetSongBuff(35,36,7,56,0,0,0,0); //加载压力
                         LcmPutSongStr(1,0,BuffCharDot,4,0);
-                        nParamValue = sKYJ.sUserParam.nSlaveLoadPress;
+                        nParamValue = sKYJ.sUserParam.nLoadPress;
                         //LcmPutFixDigit(4,40,nParamValue,4,0);
                         LcmPutFloatDigit(4,40,nParamValue,4,0,2);
                         //LcmSetSongBuff(19,0,0,0,0,0,0,0); //秒
@@ -846,7 +860,7 @@ void KYJ_ShowUserParam(unsigned char nParamIndex)
                     case 9:
                          LcmSetSongBuff(57,36,7,56,0,0,0,0); //卸载压力
                         LcmPutSongStr(1,0,BuffCharDot,4,0);
-                        nParamValue = sKYJ.sUserParam.nSlaveUnLoadPress;
+                        nParamValue = sKYJ.sUserParam.nUnLoadPress;
                         //LcmPutFixDigit(4,40,nParamValue,4,0);
                         LcmPutFloatDigit(4,40,nParamValue,4,0,2);
                         //LcmSetSongBuff(19,0,0,0,0,0,0,0); //秒
@@ -856,7 +870,7 @@ void KYJ_ShowUserParam(unsigned char nParamIndex)
                     case 10:
                         LcmSetSongBuff(31,32,45,46,0,0,0,0);//启动方式
                         LcmPutSongStr(1,0,BuffCharDot,4,0);
-                        nParamValue = sKYJ.sUserParam.nStartType;
+                        nParamValue = sKYJ.sFactoryParam.nStartType;
                         LcmPutFixDigit(4,40,nParamValue,4,0);
                     default:
                         break;
@@ -1089,13 +1103,13 @@ void KYJ_EnterParamValue(unsigned char nMI,unsigned char nPI, int nValue)
                 sKYJ.sUserParam.nRestartDelayTime = nValue;
                 break;
             case 8:
-                sKYJ.sUserParam.nSlaveLoadPress = nValue;
+                sKYJ.sUserParam.nLoadPress = nValue;
                 break;
             case 9:
-                sKYJ.sUserParam.nSlaveUnLoadPress = nValue;
+                sKYJ.sUserParam.nUnLoadPress = nValue;
                 break;
             case 10: //保存启动方式，0直接启动，非0则为星角启动
-                (nValue == 0) ? sKYJ.sUserParam.nStartType = 0 : sKYJ.sUserParam.nStartType=1;
+                (nValue == 0) ? sKYJ.sFactoryParam.nStartType = 0 : sKYJ.sFactoryParam.nStartType=1;
             default:
                 break;            
         }
@@ -1203,9 +1217,9 @@ void KYJ_UpdateData(void)  //更新压力、温度、电流
     //else sKYJ.sRunParam.nTemperature = 400;
     sKYJ.nTemperature = ((long)sKYJ.sRunParam.nTemperature-sKYJ.sRegParam.nZeroBias)* sKYJ.sRegParam.nStandTempFactor/1000;
     
-    //更新电源电压
-    //新版PCB为RB5，但是RB5没有模拟输入功能
-    sKYJ.nVoltage = 220;
+    //更新电源电压，RB3
+    nValue = adc_Get_Value(CH_Power);
+    sKYJ.nVoltage = nValue / 10;
     
 }
 
