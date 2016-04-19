@@ -4,6 +4,7 @@
 #include "adc.h"
 #include "EEPROM.h"
 
+volatile unsigned int nADVref=5000;  //AD参考电压，单位：mV
 struct KYJ_s sKYJ;
 bit bRefreshInterface;
 unsigned char nMenuIndex;  //当前菜单序号  1-运行参数；2-用户参数；3-厂家参数；4-注册参数；5-用户密码
@@ -13,9 +14,9 @@ int nParamValue;
 
 unsigned int nCurrent;  //电流采样累加值
 unsigned char nCurrentSampleCount;  //电流采样次数，1ms采样一次，每20ms（对应50Hz）计算平均值
-unsigned long nLongTemp;
-
+unsigned long nLongTemp; //32位临时变量
 bit nRet;
+
 void KYJ_Init(void)
 {
     nCurrent=0;
@@ -30,6 +31,7 @@ void KYJ_Init(void)
     MOTOR_SW_OFF;
     LOAD_SW_OFF;
 }
+
 void KYJ_Param_Default(void)
 {
     sKYJ.sUserParam.nLoadPress = 70;//加载压力
@@ -180,7 +182,7 @@ bit KYJ_CheckStatus(unsigned char nStatus)
                 }
                 
                 //电源电压保护
-                if(!(sKYJ.nFaultFlag&0x40) && (sKYJ.nVoltage<180 || sKYJ.nVoltage> 240))
+                if(!(sKYJ.nFaultFlag&0x40) && (sKYJ.sRunParam.nVoltage<180 || sKYJ.sRunParam.nVoltage> 240))
                 {
                     sKYJ.nFaultFlag|=0x40;
                     nRet = 1;
@@ -194,7 +196,7 @@ bit KYJ_CheckStatus(unsigned char nStatus)
                 }
                 
                 //温度传感器故障，如果检测到的温度采样值大于1023，则很有可能温度传感器没接
-                if(!(sKYJ.nFaultFlag&0x100 && (sKYJ.sRunParam.nTemperature >= 1023)))
+                if(!(sKYJ.nFaultFlag&0x100) && (sKYJ.sRunParam.nTemperature >= 500))
                 {
                     sKYJ.nFaultFlag |= 0x100;
                     nRet = 1;
@@ -661,7 +663,7 @@ void KYJ_ExecuteInterface(void)
                         LcmPutFixDigit(4,40,sKYJ.sRunParam.nLoadTime%10000,4,0);
                         break;
                     case 5:
-                        LcmPutFixDigit(4,40,sKYJ.nVoltage,4,0);
+                        LcmPutFixDigit(4,40,sKYJ.sRunParam.nVoltage,4,0);
                         break;
                     default:
                         break;
@@ -1038,7 +1040,7 @@ void KYJ_ShowRegParam(unsigned char nParamIndex)
                     case 4: //调整零点
                         LcmSetSongBuff(113,114,10,11,0,0,0,0); //标准温度
                         LcmPutSongStr(0,0,BuffCharDot,4,0);
-                        //LcmPutFixDigit(0,87,sKYJ.sRunParam.nTemperature,4,0);
+                        //LcmPutFixDigit(0,87,sKYJ.nTemperature,4,0);
                         LcmPutFixDigit(0,87,0,4,0);
                         
                         LcmSetSongBuff(117,118,0,0,0,0,0,0); //零点
@@ -1048,7 +1050,7 @@ void KYJ_ShowRegParam(unsigned char nParamIndex)
                         
                         LcmSetSongBuff(116,21,10,11,0,0,0,0); //现行温度
                         LcmPutSongStr(6,0,BuffCharDot,4,0);
-                        sKYJ.sRegParam.nTemp = sKYJ.sRunParam.nTemperature - sKYJ.sRegParam.nZeroBias;
+                        sKYJ.sRegParam.nTemp = sKYJ.sRunParam.nTemperature;// - sKYJ.sRegParam.nZeroBias;
                         LcmPutFixDigit(6,87,sKYJ.sRegParam.nTemp,4,0);
                                             
                         break;
@@ -1199,28 +1201,36 @@ void KYJ_UpdateData(void)  //更新压力、温度、电流
     int nValue;
 
     //更新压力
-    nValue = (int)(adc_Get_Value(CH_Pressure)*4*0.1*100/220.0-40.0);
+    //nValue = (int)(adc_Get_Value(CH_Pressure)*4*0.1*100/220.0-40);
+    nValue = adc_Get_Value(CH_Pressure);
+    nLongTemp = (long) nValue * nADVref * 100;
+    nValue = nLongTemp /(220*1024) - 40;  //压力计算公式：(sample/1024 * nADVref (mV) / 220 欧  - 4mA) * 0.1MPa/mA *100 倍数
     //if(Key_Press(KEY_MOVE))nValue = 900*4*0.1*100/220.0-40.0; //调试压力
-    sKYJ.sRunParam.nPressure = 0;
-    if(nValue>0)
-        sKYJ.sRunParam.nPressure = nValue;
+//    sKYJ.sRunParam.nPressure = 0;
+//    if(nValue>0)
+        sKYJ.sRunParam.nPressure = nValue;  //压力=nValue * 0.01MPa，如果是负值，很可能是没有接压力传感器，连4mA的电流都没有。
 
     //更新温度
     nValue = adc_Get_Value(CH_Temperature);
+    nLongTemp = (long)nValue*5000*100;
+    nValue = nLongTemp/(21000-nValue);  //得到电阻值，单位：0.01欧
 //    sKYJ.sRunParam.nTemperature = 0;
 //    if(nValue>0)
-        sKYJ.sRunParam.nTemperature = nValue;
+        sKYJ.sRunParam.nTemperature = (nValue - 10000) * 150 * 10 / 5700; //计算得到温度值，0.1度
     //if(nValue>50)sKYJ.sRunParam.nTemperature = nValue;  //因为时不时会采样到0，所以过滤一下
     //if(sKYJ.sRunParam.nTemperature<100)LcmPutFixDigit(6,0,sKYJ.sRunParam.nTemperature,4,0);
     //调试温度
     //if(Key_Press(KEY_UP))sKYJ.sRunParam.nTemperature = 895;
     //else sKYJ.sRunParam.nTemperature = 400;
-    sKYJ.nTemperature = ((long)sKYJ.sRunParam.nTemperature-sKYJ.sRegParam.nZeroBias)* sKYJ.sRegParam.nStandTempFactor/1000;
+   
     
     //更新电源电压，RB3
     nValue = adc_Get_Value(CH_Power);
-    sKYJ.nVoltage = nValue / 10;
+    //nValue = adc_Get_Value(0x0f);
+    nLongTemp = (long)nValue * nADVref * 100;
+    sKYJ.sRunParam.nVoltage = nLongTemp /1024; //假设电源电压到AD前的电压比是100：1
     
+    KYJ_CalcRegValue();
 }
 
 void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
@@ -1235,10 +1245,10 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     {
         nCurrent+=adc_Get_Value(CH_CurrentA);
         //nCurrent+=1000;
-        sKYJ.sRunParam.nCurrentA = nCurrent/10;   //计算A相的平均值，因为半波检流，所以除以20在乘以2；
+        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
+        sKYJ.sRunParam.nCurrentA = nLongTemp/(1024*100*CURRENT_SAMPLE_RES);   //计算A相的平均值，因为半波检流，所以除以20在乘以2；
 
-        sKYJ.nCurrentA = (unsigned long)sKYJ.sRegParam.nStandCurrentAFactor*sKYJ.sRunParam.nCurrentA/1000;
-        nCurrent=0;
+         nCurrent=0;
     }
     else if(nCurrentSampleCount < 40) //第21-39次采样B相
     {
@@ -1247,8 +1257,9 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     else if(nCurrentSampleCount == 40) //第40次采样B相后，计算B相采样平均值
     {
         nCurrent+=adc_Get_Value(CH_CurrentB);
-        sKYJ.sRunParam.nCurrentB = nCurrent/10;
-        sKYJ.nCurrentB = (unsigned long)sKYJ.sRegParam.nStandCurrentBFactor*sKYJ.sRunParam.nCurrentB/1000;
+        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
+        sKYJ.sRunParam.nCurrentB = nLongTemp/(1024*100*CURRENT_SAMPLE_RES); 
+        
         nCurrent=0;
     }
     else if(nCurrentSampleCount <60) //第41-59次采样C相
@@ -1258,8 +1269,9 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     else if(nCurrentSampleCount == 60)  //第60次采样C相后，计算C相平均采样值
     {
         nCurrent+=adc_Get_Value(CH_CurrentC);
-        sKYJ.sRunParam.nCurrentC = nCurrent/10;
-        sKYJ.nCurrentC = (unsigned long)sKYJ.sRegParam.nStandCurrentCFactor*sKYJ.sRunParam.nCurrentC/1000;
+        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
+        sKYJ.sRunParam.nCurrentC = nLongTemp/(1024*100*CURRENT_SAMPLE_RES); 
+        
         nCurrent=0;
         nCurrentSampleCount = 0;
     }
@@ -1267,4 +1279,18 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     {
         nCurrentSampleCount = 0;
     }   
+}
+
+void KYJ_CalcRegValue(void)  //根据调整参数计算调整后的传感器数值
+{
+    //计算压力值
+    //计算温度值
+    sKYJ.nTemperature = ((long)sKYJ.sRunParam.nTemperature-sKYJ.sRegParam.nZeroBias)* sKYJ.sRegParam.nStandTempFactor/1000;
+    
+    //计算电源电压值
+    
+    //计算电流值
+    sKYJ.nCurrentA = (unsigned long)sKYJ.sRegParam.nStandCurrentAFactor*sKYJ.sRunParam.nCurrentA/1000;
+    sKYJ.nCurrentB = (unsigned long)sKYJ.sRegParam.nStandCurrentBFactor*sKYJ.sRunParam.nCurrentB/1000;
+    sKYJ.nCurrentC = (unsigned long)sKYJ.sRegParam.nStandCurrentCFactor*sKYJ.sRunParam.nCurrentC/1000;
 }

@@ -77,7 +77,6 @@ int main(void)
     
 	//定时器1配置，10ms，源Fosc/4，再分频1:2，10ms一次中断
 	TMR1ON = 0;
-	//TMR1GE = 0;
 	TMR1CS = 0; //内部时钟Fosc/4
 	T1CKPS1 = 1; //1：4预分频比
 	T1CKPS0 = 0;
@@ -85,8 +84,7 @@ int main(void)
 	//TMR1L = 0xEF;
     TMR1H = 0x3C;  //50ms
     TMR1L = 0xAF;
-	PEIE = 1;
-	GIE = 1;
+
 	TMR1IE = 1;
 	TMR1ON = 1;
     //定时器1配置结束并启用
@@ -98,8 +96,12 @@ int main(void)
     PR2=125;
     TMR2IE=1;
     TMR2ON=1;
+    //定时器2配置结束
+    
+    //开启全局中断
+   	PEIE = 1;
+	GIE = 1;
 
-//	nCount = 0;
 	b50MsFlag = 0;
     b1SecFlag=0;
     nTimer1Count = 0;
@@ -116,10 +118,11 @@ int main(void)
         EEPROM_Save_Param(PARAM_STORE_BYTES);
         EEPROM_Write(0x10,100);
     }
-    LcmInit();
     
-    DelayMs(100);
+    //初始化
     LcmInit();
+    DelayMs(100);
+    LcmInit();  //防止LCD一次初始化失败，再次初始化
     LED_ON;
 //    DelayMs(100);
     KYJ_Init();
@@ -246,13 +249,11 @@ void interrupt isr(void)
 void IO_Config(void)
 {
     //端口A设置；RA7 RA7 继电器开关输出；RA5压力输入；RA4相序输入；RA3RA1RA0三相电流输入；RA6蜂鸣器；RA2温度测量基础电压DA输出
-//    ANCON0 = 0b0011111; //AN0-AN4
     ANSEL = 0b00011111; //ANS0-ANS4，对应RA0,RA1,RA2,RA3,RA5
     TRISA = 0b00111011;
     
     //端口B设置；RB4 温度输入；RB0 停止开关输入；RB1，RB2，RB3 按键输入 5、6、7，RB5 RUN LED，RB6 ERROR LED
     //RUN LED 从 RB5改为RB6；ERR LED从RB6改为RB7。但是RB6，RB7为调试口，暂时先不用，RB5改为输入电压模拟量输入
-//    ANCON1 = 0b00000010;  //AN9 
     //46K20，RB5改成down按键输入，RB3改成电源电压模拟输入
     ANSELH = 0b00001010; //ANS11，对应RB4端口；ANS9，对应RB3端口
     TRISB = 0b00111111;
@@ -263,9 +264,7 @@ void IO_Config(void)
     TRISC = 0b11010011;
     
     //端口D设置：RD0：ADR输出；	RD1：RES输出；	RD2：CS 输出； RD4-7 键盘输入1、2、3、4
-//    ANCON1 |= 0b00000000;
     TRISD = 0b11111000;
-//    RDPU = 1; //使能PORTD弱上拉功能
     //46K20 Port D 没有弱上拉功能
     
     //端口E设置：RE0 LCD背光输出；RE2 远程开关输入，RE1 蜂鸣器输出

@@ -18,7 +18,7 @@ struct KYJ_RunParam_s
     unsigned int nCurrentB; //主机B相电流，单位：0.1A
     unsigned int nCurrentC; //主机C相电流，单位：0.1A
     //float fCurrentFan; //风机电流，单位：A
-    unsigned int nPressure; //压力值，0.01MPa
+    int nPressure; //压力值，0.01MPa
     int nTemperature; //温度采样值
     unsigned long nTotalTime; //运行总时间，单位：小时
     unsigned long nLoadTime; //负载总时间：单位：小时
@@ -153,6 +153,8 @@ struct KYJ_Password_s
 #define BEEP_OFF PORTEbits.RE1=0
 
 #define PARAM_STORE_BYTES 0x01B4-0x0110+1 //EEPROM保存的参数字节数
+#define CURRENT_TRANS_RATIO 42 //互感器变流比例
+#define CURRENT_SAMPLE_RES 10 //电流采样电阻
 
 #define max(x,y) (x)>(y)?(x):(y);
 #define min(x,y) (x)<(y)?(x):(y);
@@ -169,7 +171,7 @@ struct KYJ_s
     unsigned int nCurrentB;
     unsigned int nCurrentC;
     int nTemperature; //计算后的温度
-    unsigned char nVoltage; //电源电压
+//    unsigned char nVoltage; //计算后的电源电压
     struct KYJ_RunParam_s sRunParam;
     struct KYJ_UserParam_s sUserParam;
     struct KYJ_FactoryParam_s sFactoryParam;
@@ -191,6 +193,7 @@ void KYJ_ShowRegParam(unsigned char nParamIndex); //显示调整参数
 
 void KYJ_EnterParamValue(unsigned char nMI,unsigned char nPI, int nValue);
 
+void KYJ_CalcRegValue(void);  //根据调整参数计算调整后的传感器数值
 void KYJ_UpdateData(void);  //更新压力、温度、电流
 void KYJ_SampleCurrent(void);  //在定时中断中1ms调用一次
 void KYJ_Init(void);
