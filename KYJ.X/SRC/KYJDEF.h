@@ -19,10 +19,10 @@ struct KYJ_RunParam_s
     unsigned int nCurrentC; //主机C相电流，单位：0.1A
     //float fCurrentFan; //风机电流，单位：A
     int nPressure; //压力值，0.01MPa
-    int nTemperature; //温度采样值
+    int nTemperature; //温度值，0.1度
+    unsigned int nVoltage; //电压值，V
     unsigned long nTotalTime; //运行总时间，单位：小时
     unsigned long nLoadTime; //负载总时间：单位：小时
-    unsigned int nVoltage; //电源电压，单位：伏特
 };
 
 struct KYJ_UserParam_s
@@ -64,7 +64,7 @@ struct KYJ_UserParam_s
 };
 struct KYJ_FactoryParam_s
 {
-    unsigned int nMainMotorNormalCurrent;  //主机额定电流
+    unsigned int nMainMotorNormalCurrent;  //主机额定电流，单位0.1A
     unsigned int nWarningTemp; //排温预警温度
     unsigned int nStopTemp;//排温停机温度
     unsigned int nStopPress; //供气停机压力
@@ -167,11 +167,12 @@ struct KYJ_s
     unsigned int nStatusTimeElapse;  //进入某一状态后的时间持续值，单位：秒
     unsigned char nInterfaceTimeElapse;
     unsigned int nFaultFlag;//故障标志，D0 缺相；D1 电流不平衡；D2 过热停机；D3 超压停机；D4低温保护；D5过载保护；D6电源电压保护；D7压力传感器故障；D8温度传感器故障
-    unsigned int nCurrentA;  //计算后的电流
+    unsigned int nCurrentA;  //校正计算后的电流，0.1A
     unsigned int nCurrentB;
     unsigned int nCurrentC;
-    int nTemperature; //计算后的温度
-//    unsigned char nVoltage; //计算后的电源电压
+    int nTemperature; //校正计算后的温度，度
+    int nPressure; //校正计算后的压力值，0.01MPa
+    unsigned char nVoltage; //校正计算后的电源电压，V
     struct KYJ_RunParam_s sRunParam;
     struct KYJ_UserParam_s sUserParam;
     struct KYJ_FactoryParam_s sFactoryParam;

@@ -129,7 +129,7 @@ int main(void)
     adc_init();
     LED_RUN_ON;
     LED_ERROR_ON;
-    //BEEP_ON;
+    BEEP_ON;
     //显示欢迎界面
     LcmSetSongBuff(1,2,3,4,0,0,0,0);
     LcmPutSongStr(1,30,BuffCharDot,4,0);
@@ -142,7 +142,7 @@ int main(void)
     LED_RUN_OFF;
     LED_ERROR_OFF;
     BEEP_OFF;
-    
+
     //sKYJ.nStatusTimeElapse = sKYJ.sUserParam.nRestartDelayTime;
     //sKYJ.sFactoryParam.nLowTempProtect = -10;
     while(1)
