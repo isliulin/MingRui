@@ -38,7 +38,7 @@ struct KYJ_UserParam_s
     unsigned int nStopDelayTime; //停机延时时间
     unsigned int nRestartDelayTime; //重启延时时间
     unsigned char nStartStopMode; //启停方式
-    unsigned char nLoadMode; //加载方式
+    unsigned char nLoadMode; //加载方式；1-自动，0-手动
     unsigned char nCommMode; //通讯方式
     unsigned char nCommCode; //通讯编码
     unsigned char nSlaveMode; //联动状态
@@ -172,7 +172,7 @@ struct KYJ_s
     unsigned int nCurrentC;
     int nTemperature; //校正计算后的温度，度
     int nPressure; //校正计算后的压力值，0.01MPa
-    unsigned char nVoltage; //校正计算后的电源电压，V
+    unsigned int nVoltage; //校正计算后的电源电压，V
     struct KYJ_RunParam_s sRunParam;
     struct KYJ_UserParam_s sUserParam;
     struct KYJ_FactoryParam_s sFactoryParam;

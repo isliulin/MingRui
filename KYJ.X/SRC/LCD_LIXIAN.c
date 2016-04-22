@@ -21,7 +21,7 @@ void WriteCommand( Uchar CommandByte )
 	{	SCK=1;
 		SID=( (CommandByte>>(7-i)) &0x01);
 		SCK=0;
-		DelayUs(1);
+		//DelayUs(1);
 		SCK=1;
 	}
 }
@@ -36,7 +36,7 @@ void WriteData( Uchar DataByte )
 		SCK=1;
 		SID=( (DataByte>>(7-i)) &0x01);
 		SCK=0;
-		DelayUs(1);
+		//DelayUs(1);
 		SCK=1;
 	}
 }
