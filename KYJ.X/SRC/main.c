@@ -145,6 +145,7 @@ int main(void)
 
     //sKYJ.nStatusTimeElapse = sKYJ.sUserParam.nRestartDelayTime;
     //sKYJ.sFactoryParam.nLowTempProtect = -10;
+    KYJ_UpdateData();
     while(1)
 	{
         //检查状态
@@ -172,7 +173,7 @@ int main(void)
 		if(b50MsFlag)
 		{
             //更新压力和温度数据
-            KYJ_UpdateData();
+//            KYJ_UpdateData();  //不能放在这里，会被1ms的中断打断，导致采样不准
             b50MsFlag = 0;
         }
         if(b1SecFlag)
@@ -219,7 +220,7 @@ void interrupt isr(void)
          // Timer 2 Interrupt
          if (TMR2IF == 1 && TMR2IE == 1) 
          {
-             TMR2IF = 0;
+            TMR2IF = 0;
             KYJ_SampleCurrent();  //采样一次电流值
 //             RD2=!RD2;
 //             nTemp++;

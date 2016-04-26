@@ -14,15 +14,18 @@ void adc_init()
 int adc_Get_Value(unsigned char nChannel)
 {
     //int nRes;
-    //ADON = 0;
+//    ADON = 0;
     ADCON0 = nChannel<<2 | 0b00000001;
     //DelayUs(10);
-    //ADON = 1;
+//    ADON = 1;
+//    ADCON0bits.GODONE = 1;
+//    while(ADCON0bits.GODONE){;}
+
     ADCON0bits.GODONE = 1;
     //ADCON0 |= 0b00000010;
     //while(ADCON0 & 0b00000010){;}
     while(ADCON0bits.GODONE){;}
-    //DelayUs(10);
+//    DelayUs(10);
     //nRes = ADRESH << 8 | ADRESL;
     return ADRESH << 8 | ADRESL;
     //return nRes;
