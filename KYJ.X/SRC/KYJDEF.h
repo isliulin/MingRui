@@ -32,7 +32,7 @@ struct KYJ_UserParam_s
     unsigned int nFanStartTemp; //风机启温度
     unsigned int nFanStopTemp; //风机停温度
     unsigned int nMCUDelayTime; //主机延时时间，单位：秒
-    unsigned char nSADelayTime; //星角延时时间，单位：秒
+    unsigned int nSADelayTime; //星角延时时间，单位：秒
     unsigned int nLoadDelayTime; //加载延时时间，单位：秒
     unsigned int nNoLoadDelayTime; //空载延时时间
     unsigned int nStopDelayTime; //停机延时时间
@@ -152,7 +152,7 @@ struct KYJ_Password_s
 #define BEEP_ON PORTEbits.RE1=1  //蜂鸣器开关
 #define BEEP_OFF PORTEbits.RE1=0
 
-#define PARAM_STORE_BYTES 0x01B4-0x0110+1 //EEPROM保存的参数字节数
+#define PARAM_STORE_BYTES 0x01B8-0x0127+1 //EEPROM保存的参数字节数
 #define CURRENT_TRANS_RATIO 42 //互感器变流比例
 #define CURRENT_SAMPLE_RES 10 //电流采样电阻
 

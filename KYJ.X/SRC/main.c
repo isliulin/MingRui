@@ -145,7 +145,6 @@ int main(void)
 
     //sKYJ.nStatusTimeElapse = sKYJ.sUserParam.nRestartDelayTime;
     //sKYJ.sFactoryParam.nLowTempProtect = -10;
-    KYJ_UpdateData();
     while(1)
 	{
         //检查状态
