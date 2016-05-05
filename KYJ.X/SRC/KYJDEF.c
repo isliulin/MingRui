@@ -194,7 +194,7 @@ bit KYJ_CheckStatus(unsigned char nStatus)
             }
 
             //压力传感器故障，如果检测到的电流<4mA，则测量值为0
-            if(!(sKYJ.nFaultFlag&0x80) && (sKYJ.nPressure <1))
+            if(!(sKYJ.nFaultFlag&0x80) && (sKYJ.sRunParam.nPressure < -10))
             {
                 sKYJ.nFaultFlag |= 0x80;
                 nRet = 1;
@@ -1397,7 +1397,7 @@ void KYJ_UpdateData(void)  //更新压力、温度、电流
     //更新压力
     //nValue = (int)(adc_Get_Value(CH_Pressure)*4*0.1*100/220.0-40);
     nValue = adc_Get_Value(CH_Pressure);
-    nValue = adc_Get_Value(CH_Temperature);
+//    nValue = adc_Get_Value(CH_Temperature);
     nLongTemp = (long) nValue * nADVref * 100;
     nValue = nLongTemp /(220*1024) - 40;  //压力计算公式：(sample/1024 * nADVref (mV) / 220 欧  - 4mA) * 0.1MPa/mA *100 倍数
     sKYJ.sRunParam.nPressure = nValue;  //压力=nValue * 0.01MPa，如果是负值，很可能是没有接压力传感器，连4mA的电流都没有。
@@ -1426,39 +1426,62 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     nCurrentSampleCount++;
     if(nCurrentSampleCount<20)  //1-19次采样A相
     {
-        nCurrent+=adc_Get_Value(CH_CurrentA);
-        //nCurrent+=1000;
+        //取最大值
+        nValue = adc_Get_Value(CH_CurrentA);
+        if(nValue > nCurrent) nCurrent = nValue;
+        //取平均值
+        //nCurrent+=adc_Get_Value(CH_CurrentA);
     }
     else if(nCurrentSampleCount == 20) //第20次采样后，计算A相平均采样值
     {
-        nCurrent+=adc_Get_Value(CH_CurrentA);
-        //nCurrent+=1000;
-        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
-        sKYJ.sRunParam.nCurrentA = nLongTemp/(1024*100*CURRENT_SAMPLE_RES);   //计算A相的平均值，因为半波检流，所以除以20在乘以2；
+        //取最大值
+        nValue = adc_Get_Value(CH_CurrentA);
+        if(nValue > nCurrent) nCurrent = nValue;
+        //取平均值
+        //nCurrent+=adc_Get_Value(CH_CurrentA);
+ 
+//这个可能溢出
+//        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
+//        sKYJ.sRunParam.nCurrentA = nLongTemp/(1024*100*CURRENT_SAMPLE_RES);   //计算A相的平均值，因为半波检流，所以除以20在乘以2；
+        
+        nLongTemp = nCurrent * 5 * CURRENT_TRANS_RATIO;
+        sKYJ.sRunParam.nCurrentA = nLongTemp/(102*CURRENT_SAMPLE_RES);   //计算A相电流，*5 参考电压5伏，/102，也就是1024，因为单位0.1A，也就是放大10倍
 
          nCurrent=0;
     }
     else if(nCurrentSampleCount < 40) //第21-39次采样B相
     {
-        nCurrent+=adc_Get_Value(CH_CurrentB);
+        //nCurrent+=adc_Get_Value(CH_CurrentB);
+        nValue = adc_Get_Value(CH_CurrentB);
+        if(nValue > nCurrent) nCurrent = nValue;
     }
     else if(nCurrentSampleCount == 40) //第40次采样B相后，计算B相采样平均值
     {
-        nCurrent+=adc_Get_Value(CH_CurrentB);
-        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
-        sKYJ.sRunParam.nCurrentB = nLongTemp/(1024*100*CURRENT_SAMPLE_RES); 
+//        nCurrent+=adc_Get_Value(CH_CurrentB);
+        nValue = adc_Get_Value(CH_CurrentB);
+        if(nValue > nCurrent) nCurrent = nValue;
+//        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
+//        sKYJ.sRunParam.nCurrentB = nLongTemp/(1024*100*CURRENT_SAMPLE_RES); 
+        nLongTemp = nCurrent * 5 * CURRENT_TRANS_RATIO;
+        sKYJ.sRunParam.nCurrentB = nLongTemp/(102*CURRENT_SAMPLE_RES);   //计算B相电流，*5 参考电压5伏，/102，也就是1024，因为单位0.1A，也就是放大10倍
         
         nCurrent=0;
     }
     else if(nCurrentSampleCount <60) //第41-59次采样C相
     {
-        nCurrent+=adc_Get_Value(CH_CurrentC);
+//        nCurrent+=adc_Get_Value(CH_CurrentC);
+        nValue = adc_Get_Value(CH_CurrentC);
+        if(nValue > nCurrent) nCurrent = nValue;
     }
     else if(nCurrentSampleCount == 60)  //第60次采样C相后，计算C相平均采样值
     {
-        nCurrent+=adc_Get_Value(CH_CurrentC);
-        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
-        sKYJ.sRunParam.nCurrentC = nLongTemp/(1024*100*CURRENT_SAMPLE_RES); 
+//        nCurrent+=adc_Get_Value(CH_CurrentC);
+        nValue = adc_Get_Value(CH_CurrentC);
+        if(nValue > nCurrent) nCurrent = nValue;
+//        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
+//        sKYJ.sRunParam.nCurrentC = nLongTemp/(1024*100*CURRENT_SAMPLE_RES); 
+        nLongTemp = nCurrent * 5 * CURRENT_TRANS_RATIO;
+        sKYJ.sRunParam.nCurrentC = nLongTemp/(102*CURRENT_SAMPLE_RES);   //计算C相电流，*5 参考电压5伏，/102，也就是1024，因为单位0.1A，也就是放大10倍  
         
         nCurrent=0;
         //nCurrentSampleCount = 0;
@@ -1474,14 +1497,19 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
         nValue = nCurrent / 10;
 
 //        nValue = adc_Get_Value(CH_Pressure);
-//        nLongTemp = (long) nValue * nADVref * 100;
+//        nLongTemp = (long) nValue * nADVref * 10;
+
         
-        nValue = adc_Get_Value(CH_Temperature)*15/10;  //测试用
-        nLongTemp = (long) nValue * nADVref;  //测试用
-        
-        nValue = nLongTemp /(220*1024) - 40;  //压力计算公式：(sample/1024 * nADVref (mV) / 220 欧  - 4mA) * 0.1MPa/mA *100 倍数
+//        nValue = adc_Get_Value(CH_Temperature)*15/10;  //测试用
+//        nLongTemp = (long) nValue * nADVref;  //测试用
+        nLongTemp = nValue * nADVref;
+        nLongTemp = nLongTemp /22;
+        nLongTemp = nLongTemp /1024;
+        nValue = nLongTemp -40;
+        //nValue = nLongTemp /(220*1024) - 40;  //压力计算公式：(sample/1024 * nADVref (mV) / 220 欧  - 4mA) * 0.1MPa/mA *100 倍数
         sKYJ.sRunParam.nPressure = nValue;  //压力=nValue * 0.01MPa，如果是负值，很可能是没有接压力传感器，连4mA的电流都没有。    
         nCurrent = 0;
+        nLongTemp = 0;
     }
     else if(nCurrentSampleCount <80)
     {
@@ -1494,9 +1522,10 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
         nCurrent += adc_Get_Value(CH_Temperature);
         nValue = nCurrent/10;
 
-        nLongTemp = (long)nValue*5000*100;
+        nLongTemp = (long)nValue*5000*100;  //是否有溢出的风险
         nValue = nLongTemp/(21000-nValue);  //得到电阻值，单位：0.01欧
         nLongTemp = (long)(nValue - 10000) * 150 * 10 / 5700; 
+        
         sKYJ.sRunParam.nTemperature = nLongTemp; //计算得到温度值，0.1度
         sKYJ.nTemperature = sKYJ.sRunParam.nTemperature/10;   //显示温度值   
         

@@ -153,7 +153,7 @@ struct KYJ_Password_s
 #define BEEP_OFF PORTEbits.RE1=0
 
 #define PARAM_STORE_BYTES 0x01B8-0x0127+1 //EEPROM保存的参数字节数
-#define CURRENT_TRANS_RATIO 42 //互感器变流比例
+#define CURRENT_TRANS_RATIO 420 //互感器变流比例
 #define CURRENT_SAMPLE_RES 10 //电流采样电阻
 
 #define max(x,y) (x)>(y)?(x):(y);
