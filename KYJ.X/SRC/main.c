@@ -184,6 +184,7 @@ int main(void)
             sKYJ.nInterfaceTimeElapse++;
             //重新初始化下端口
 //            IO_Config();
+            if(sKYJ.nInterface == INTERFACE_RUNPARAM)KYJ_ShowRunParam();
             b1SecFlag=0;
         }
 

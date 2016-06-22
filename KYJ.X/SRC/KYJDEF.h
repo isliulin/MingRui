@@ -198,6 +198,7 @@ void KYJ_CalcRegValue(void);  //根据调整参数计算调整后的传感器数
 void KYJ_UpdateData(void);  //更新压力、温度、电流
 void KYJ_SampleCurrent(void);  //在定时中断中1ms调用一次
 void KYJ_Init(void);
+void KYJ_ShowRunParam(void);
 
 #ifdef	__cplusplus
 }

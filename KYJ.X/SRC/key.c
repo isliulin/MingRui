@@ -43,6 +43,8 @@ bit Key_ReadKey(unsigned char cKey)
             return KEY_MOVE_PIN;
         case KEY_OK:
             return KEY_OK_PIN;
+        case KEY_EMERGY_STOP:
+            return KEY_EMERGY_STOP_PIN;
         default:
             return 1;
     }

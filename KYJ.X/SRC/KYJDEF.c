@@ -16,7 +16,8 @@ unsigned int nCurrent;  //电流采样累加值
 unsigned char nCurrentSampleCount;  //电流采样次数，1ms采样一次，每20ms（对应50Hz）计算平均值
 unsigned long nLongTemp; //32位临时变量
 bit nRet;
-int nValue;
+int nSampleValue;
+unsigned int nLeftTime;
 void KYJ_Init(void)
 {
     nCurrent=0;
@@ -94,7 +95,7 @@ void KYJ_Param_Default(void)
     sKYJ.sFactoryParam.nWarningOverTime = 10;//预警过久停机
     sKYJ.sFactoryParam.nCommParam = 0;//通信预置参数
     //sKYJ.sFactoryParam.nParam1 = 0;//参数1
-     sKYJ.sFactoryParam.nStartType = 1;  //默认直接启动   
+     sKYJ.sFactoryParam.nStartType = 0;  //默认直接启动   
     
     sKYJ.sRegParam.nStandCurrentA = 0;//标准电流
     sKYJ.sRegParam.nStandCurrentAFactor = 1000;//系数
@@ -131,19 +132,21 @@ bit KYJ_CheckStatus(unsigned char nStatus)
         case STATUS_POWERSTOP:
             break;
         case STATUS_KEYSTOP:
-            if(sKYJ.nStatus != STATUS_KEYSTOP && Key_Press(KEY_STOP)) nRet=1;
+            if(sKYJ.nStatus != STATUS_KEYSTOP && sKYJ.nStatus != STATUS_FAULTSTOP && Key_Press(KEY_STOP)) nRet=1;
             if(sKYJ.nStatus == STATUS_FAULTSTOP && sKYJ.nFaultFlag == 0) nRet = 1;
+            
+            //按下紧急停止按钮
+            if(Key_Press(KEY_EMERGY_STOP)) {LOAD_SW_OFF;MOTOR_SW_OFF;FAN_SW_OFF;nRet=1;}
             break;
         case STATUS_DELAYSTOP:
             if(sKYJ.nStatus == STATUS_UNLOAD && sKYJ.nStatusTimeElapse > sKYJ.sUserParam.nNoLoadDelayTime) nRet = 1;
             break;
         case STATUS_FAULTSTOP:
-            
             //if(sKYJ.nStatus !=STATUS_FAULTSTOP)
             //相序检测
-
             if(!(sKYJ.nFaultFlag&0x01) && !PORTAbits.RA4) {sKYJ.nFaultFlag |= 0x01;nRet=1;}
             else if(PORTAbits.RA4) sKYJ.nFaultFlag &= 0xFE;
+            
             if(!(sKYJ.nStatus == STATUS_STARTUP && sKYJ.nStatusTimeElapse <sKYJ.sUserParam.nMCUDelayTime)) //如果在启动时间内，则不检测电流不平衡
             {
                 //电流不平衡检测，是否需要在主机延时时间以后才检测？
@@ -201,7 +204,7 @@ bit KYJ_CheckStatus(unsigned char nStatus)
             }
 
             //温度传感器故障，如果检测到的温度值大于1000，则很有可能温度传感器没接
-            if(!(sKYJ.nFaultFlag&0x100) && (sKYJ.nTemperature >= 1000))
+            if(!(sKYJ.nFaultFlag&0x100) && (sKYJ.nTemperature >= 280))
             {
                 sKYJ.nFaultFlag |= 0x100;
                 nRet = 1;
@@ -318,8 +321,6 @@ void KYJ_SwitchToStatus(unsigned char nStatus)
             {
                 MOTOR_SW_ON;  //直接启动
             }
-           
-            
             //sKYJ.nFaultFlag=0;  //错误标志清零
             LED_ERROR_OFF;
             break;
@@ -407,7 +408,7 @@ bit KYJ_CheckInterface(unsigned char nInterface)
     {
         case INTERFACE_MAIN:
             if(sKYJ.nInterface == 0 ||
-                    (sKYJ.nInterface!=INTERFACE_MAIN && sKYJ.nInterfaceTimeElapse > 10) || 
+                    (sKYJ.nInterface!=INTERFACE_MAIN && sKYJ.nInterfaceTimeElapse > 30) ||  //在其他界面没有按键操作达30秒 
                     (sKYJ.nInterface == INTERFACE_MENU && Key_Release(KEY_RESET))
                     ) nRet = 1;
             break;
@@ -528,29 +529,32 @@ void KYJ_ExecuteInterface(void)
                     break;
                 case STATUS_KEYSTOP:
                     LcmSetSongBuff(13,14,17,18,30,0,0,0);//设备停止
-                    LcmPutSongStr(4,0,BuffCharDot,5,0);
+                    nLeftTime = 0;                        
+
                     //显示停机延时剩余时间
                     if(sKYJ.nStatusTimeElapse <= sKYJ.sUserParam.nStopDelayTime)
                     {
-                        nValue = (sKYJ.nStatusTimeElapse > sKYJ.sUserParam.nStopDelayTime)? 0 : (sKYJ.sUserParam.nStopDelayTime - sKYJ.nStatusTimeElapse);
+                        LcmSetSongBuff(17,9,37,33,30,0,0,0);//停机延时
+                        nLeftTime = (sKYJ.nStatusTimeElapse > sKYJ.sUserParam.nStopDelayTime)? 0 : (sKYJ.sUserParam.nStopDelayTime - sKYJ.nStatusTimeElapse);
                     }
-                    else
+                    else if(sKYJ.nStatusTimeElapse <= sKYJ.sUserParam.nRestartDelayTime)
                     {
-                        nValue = (sKYJ.nStatusTimeElapse > sKYJ.sUserParam.nRestartDelayTime)? 0 : (sKYJ.sUserParam.nRestartDelayTime - sKYJ.nStatusTimeElapse);
+                        LcmSetSongBuff(44,31,37,33,30,0,0,0);//重启延时
+                        nLeftTime = sKYJ.sUserParam.nRestartDelayTime - sKYJ.nStatusTimeElapse;
                     }
-                    LcmPutFixDigit(4,79,nValue,4,0);
+                    LcmPutSongStr(4,0,BuffCharDot,5,0); 
+                    LcmPutFixDigit(4,79,nLeftTime,4,0);
                     LcmSetSongBuff(19,0,0,0,0,0,0,0); //秒
                     LcmPutSongStr(4,112,BuffCharDot,1,0);
                     break;
                 case STATUS_DELAYSTOP:
                     LcmSetSongBuff(13,14,17,18,30,0,0,0);//设备停止
                     LcmPutSongStr(4,0,BuffCharDot,5,0);
-                    
-                    
-                    nValue = 0; //空久时间到，则立即关闭主机
+
+                    nLeftTime = 0; //空久时间到，则立即关闭主机
                     //显示重启延时剩余时间
-                    nValue = (sKYJ.nStatusTimeElapse > sKYJ.sUserParam.nRestartDelayTime)? 0 : (sKYJ.sUserParam.nRestartDelayTime - sKYJ.nStatusTimeElapse);
-                    LcmPutFixDigit(4,79,nValue,4,0);
+                    nLeftTime = (sKYJ.nStatusTimeElapse > sKYJ.sUserParam.nRestartDelayTime)? 0 : (sKYJ.sUserParam.nRestartDelayTime - sKYJ.nStatusTimeElapse);
+                    LcmPutFixDigit(4,79,nLeftTime,4,0);
                     LcmSetSongBuff(19,0,0,0,0,0,0,0); //秒
                     LcmPutSongStr(4,112,BuffCharDot,1,0);
                     break;
@@ -602,26 +606,33 @@ void KYJ_ExecuteInterface(void)
                     LcmPutStr(111,4,(unsigned char *)"  "); //把秒覆盖掉
                     break;
                 case STATUS_STARTUP:
-                    LcmSetSongBuff(13,14,31,32,30,0,0,0);//设备已启动
-                    LcmPutSongStr(4,0,BuffCharDot,5,0);
                     //显示加载延时剩余时间
-                    nValue = 0;
+                    nLeftTime = 0;
+                    LcmSetSongBuff(13,14,31,32,30,0,0,0);//设备已启动
                     if(sKYJ.sFactoryParam.nStartType == 1)//如果是星角启动
                     {
                         if(sKYJ.nStatusTimeElapse <= sKYJ.sUserParam.nSADelayTime)
                         {
-                            nValue = sKYJ.sUserParam.nSADelayTime - sKYJ.nStatusTimeElapse;
+                            nLeftTime = sKYJ.sUserParam.nSADelayTime - sKYJ.nStatusTimeElapse;
+                            LcmSetSongBuff(120,121,37,33,30,0,0,0);//星角延时：
                         }
-                        else
+                        else if (sKYJ.nStatusTimeElapse <= (sKYJ.sUserParam.nMCUDelayTime+sKYJ.sUserParam.nLoadDelayTime))
                         {
-                            nValue = (sKYJ.nStatusTimeElapse > (sKYJ.sUserParam.nMCUDelayTime+sKYJ.sUserParam.nLoadDelayTime))? 0 : ((sKYJ.sUserParam.nMCUDelayTime+sKYJ.sUserParam.nLoadDelayTime) - sKYJ.nStatusTimeElapse);
+                            nLeftTime = (sKYJ.sUserParam.nMCUDelayTime+sKYJ.sUserParam.nLoadDelayTime) - sKYJ.nStatusTimeElapse;
+                            LcmSetSongBuff(35,36,37,33,30,0,0,0);//加载延时：
                         }
                     }
                     else
                     {
-                        nValue = (sKYJ.nStatusTimeElapse > (sKYJ.sUserParam.nMCUDelayTime+sKYJ.sUserParam.nLoadDelayTime))? 0 : ((sKYJ.sUserParam.nMCUDelayTime+sKYJ.sUserParam.nLoadDelayTime) - sKYJ.nStatusTimeElapse);
+                        if(sKYJ.nStatusTimeElapse <= (sKYJ.sUserParam.nMCUDelayTime+sKYJ.sUserParam.nLoadDelayTime))
+                        {
+                            nLeftTime = (sKYJ.sUserParam.nMCUDelayTime+sKYJ.sUserParam.nLoadDelayTime) - sKYJ.nStatusTimeElapse;
+                            LcmSetSongBuff(35,36,37,33,30,0,0,0);//加载延时：
+                        }
                     }
-                    LcmPutFixDigit(4,79,nValue,4,0);
+                    
+                    LcmPutSongStr(4,0,BuffCharDot,5,0);
+                    LcmPutFixDigit(4,79,nLeftTime,4,0);
                     LcmSetSongBuff(19,0,0,0,0,0,0,0); //秒
                     LcmPutSongStr(4,112,BuffCharDot,1,0);                    
                     break;
@@ -637,8 +648,8 @@ void KYJ_ExecuteInterface(void)
                     LcmSetSongBuff(13,14,57,36,30,0,0,0);//设备已卸载
                     LcmPutSongStr(4,0,BuffCharDot,5,0);
                     //显示空车延时剩余时间
-                    nValue = (sKYJ.nStatusTimeElapse > sKYJ.sUserParam.nNoLoadDelayTime)? 0 : (sKYJ.sUserParam.nNoLoadDelayTime - sKYJ.nStatusTimeElapse);
-                    LcmPutFixDigit(4,79,nValue,4,0);
+                    nLeftTime = (sKYJ.nStatusTimeElapse > sKYJ.sUserParam.nNoLoadDelayTime)? 0 : (sKYJ.sUserParam.nNoLoadDelayTime - sKYJ.nStatusTimeElapse);
+                    LcmPutFixDigit(4,79,nLeftTime,4,0);
                     LcmSetSongBuff(19,0,0,0,0,0,0,0); //秒
                     LcmPutSongStr(4,112,BuffCharDot,1,0);                    
                     break;
@@ -667,13 +678,13 @@ void KYJ_ExecuteInterface(void)
             if(Key_Release(KEY_DOWN))
             {
                 nMenuIndex++;
-                if(nMenuIndex> 5) nMenuIndex = 1;
+                if(nMenuIndex> 4) nMenuIndex = 1;  //暂时不要密码设置，最大值为4，如果密码设置，则最大值为5
                 bRefreshInterface = 1;
             }
             else if(Key_Release(KEY_UP))
             {
                 nMenuIndex--;
-                if(nMenuIndex<1) nMenuIndex = 5;
+                if(nMenuIndex<1) nMenuIndex = 4;  //暂时不要密码设置，最大值为4，如果密码设置，则最大值为5
                 bRefreshInterface = 1;
             }
             if(bRefreshInterface)
@@ -724,6 +735,9 @@ void KYJ_ExecuteInterface(void)
                         LcmPutStr(0,2,(unsigned char *)"(A):");
                         LcmPutStr(0,4,(unsigned char *)"(B):");
                         LcmPutStr(0,6,(unsigned char *)"(C):");
+                        LcmPutChar(80,2,'A');
+                        LcmPutChar(80,4,'A');
+                        LcmPutChar(80,6,'A');
                         break;
                     case 2:
                         LcmSetSongBuff(7,56,0,0,0,0,0,0); //压力
@@ -758,58 +772,9 @@ void KYJ_ExecuteInterface(void)
                     default:
                         break;
                 }
+                //下面是显示当前运行状态数据，在主程序中每隔1秒会调用
+                KYJ_ShowRunParam();
             }
-                switch(nParamIndex)
-                {
-                    case 1:
-//                        LcmSetSongBuff(29,9,79,80,0,0,0,0); //主机电流
-//                        LcmPutSongStr(0,0,BuffCharDot,4,0);
-//                        LcmPutStr(0,2,"(A):");
-//                        LcmPutStr(0,4,"(B):");
-//                        LcmPutStr(0,6,"(C):");
-                        //nLongTemp = (unsigned long)sKYJ.sRunParam.nCurrentA * sKYJ.sRegParam.nStandCurrentAFactor;
-                        LcmPutFloatDigit(2,32,sKYJ.nCurrentA,4,0,1);
-                        LcmPutChar(80,2,'A');
-                        //nLongTemp = (unsigned long)sKYJ.sRunParam.nCurrentB*sKYJ.sRegParam.nStandCurrentBFactor;
-                        LcmPutFloatDigit(4,32,sKYJ.nCurrentB,4,0,1);
-                        LcmPutChar(80,4,'A');
-                        //nLongTemp = (unsigned long)sKYJ.sRunParam.nCurrentC*sKYJ.sRegParam.nStandCurrentCFactor;
-                        LcmPutFloatDigit(6,32,sKYJ.nCurrentC,4,0,1);
-                        LcmPutChar(80,6,'A');
-                        break;
-                    case 2:
-//                        LcmSetSongBuff(7,56,0,0,0,0,0,0); //压力
-//                        LcmPutSongStr(1,0,BuffCharDot,2,0);
-//                        LcmPutStr(96,4,"MPa");
-                        LcmPutFloatDigit(4,40,sKYJ.nPressure,4,0,2);
-                        
-                        break;
-                    case 3:
-//                        LcmSetSongBuff(20,21,87,33,34,0,0,0); //运行总时间
-//                        LcmPutSongStr(1,0,BuffCharDot,5,0);
-//                        
-//                        LcmSetSongBuff(119,33,0,0,0,0,0,0); //小时
-//                        LcmPutSongStr(4,96,BuffCharDot,2,0);
-                        LcmPutFixDigit(4,8,sKYJ.sRunParam.nTotalTime/10000,4,0);
-                        LcmPutFixDigit(4,40,sKYJ.sRunParam.nTotalTime%10000,4,0);
-                        break;
-
-                    case 4:
-                        
-//                        LcmSetSongBuff(88,36,87,33,34,0,0,0); //负载总时间
-//                        LcmPutSongStr(1,0,BuffCharDot,5,0);
-//                        
-//                        LcmSetSongBuff(119,33,0,0,0,0,0,0); //小时
-//                        LcmPutSongStr(4,96,BuffCharDot,2,0);        
-                        LcmPutFixDigit(4,8,sKYJ.sRunParam.nLoadTime/10000,4,0);
-                        LcmPutFixDigit(4,40,sKYJ.sRunParam.nLoadTime%10000,4,0);
-                        break;
-                    case 5:
-                        LcmPutFixDigit(4,40,sKYJ.nVoltage,4,0);
-                        break;
-                    default:
-                        break;
-                }
             break;
         case INTERFACE_USERPARAM:  //用户参数
             if(Key_Release(KEY_DOWN))
@@ -1392,30 +1357,28 @@ void KYJ_EnterParamValue(unsigned char nMI,unsigned char nPI, int nValue)
 
 void KYJ_UpdateData(void)  //更新压力、温度、电流
 {
-
-    
     //更新压力
-    //nValue = (int)(adc_Get_Value(CH_Pressure)*4*0.1*100/220.0-40);
-    nValue = adc_Get_Value(CH_Pressure);
-//    nValue = adc_Get_Value(CH_Temperature);
-    nLongTemp = (long) nValue * nADVref * 100;
-    nValue = nLongTemp /(220*1024) - 40;  //压力计算公式：(sample/1024 * nADVref (mV) / 220 欧  - 4mA) * 0.1MPa/mA *100 倍数
-    sKYJ.sRunParam.nPressure = nValue;  //压力=nValue * 0.01MPa，如果是负值，很可能是没有接压力传感器，连4mA的电流都没有。
-//    if(nValue > 0)
+    //nSampleValue = (int)(adc_Get_Value(CH_Pressure)*4*0.1*100/220.0-40);
+    nSampleValue = adc_Get_Value(CH_Pressure);
+//    nSampleValue = adc_Get_Value(CH_Temperature);
+    nLongTemp = (long) nSampleValue * nADVref * 100;
+    nSampleValue = nLongTemp /(220*1024) - 40;  //压力计算公式：(sample/1024 * nADVref (mV) / 220 欧  - 4mA) * 0.1MPa/mA *100 倍数
+    sKYJ.sRunParam.nPressure = nSampleValue;  //压力=nSampleValue * 0.01MPa，如果是负值，很可能是没有接压力传感器，连4mA的电流都没有。
+//    if(nSampleValue > 0)
 //        sKYJ.nPressure = sKYJ.sRunParam.nPressure;  //压力显示值
     //更新温度
-    nValue = adc_Get_Value(CH_Temperature)*15/10;
+    nSampleValue = adc_Get_Value(CH_Temperature)*15/10;
 
-    nLongTemp = (long)nValue*5000*100;
-    nValue = nLongTemp/(21000-nValue);  //得到电阻值，单位：0.01欧
-    nLongTemp = (long)(nValue - 10000) * 150 * 10 / 5700; 
+    nLongTemp = (long)nSampleValue*5000*100;
+    nSampleValue = nLongTemp/(21000-nSampleValue);  //得到电阻值，单位：0.01欧
+    nLongTemp = (long)(nSampleValue - 10000) * 150 * 10 / 5700; 
     sKYJ.sRunParam.nTemperature = nLongTemp; //计算得到温度值，0.1度
     sKYJ.nTemperature = sKYJ.sRunParam.nTemperature/10;   //显示温度值
 
     //更新电源电压，RB3
-    nValue = adc_Get_Value(CH_Power);
+    nSampleValue = adc_Get_Value(CH_Power);
    
-    nLongTemp = (long)nValue * nADVref * 6;  //采样电阻分压比5.5454：1，变压器变比11：1
+    nLongTemp = (long)nSampleValue * nADVref * 6;  //采样电阻分压比5.5454：1，变压器变比11：1
     sKYJ.sRunParam.nVoltage = nLongTemp /102400; //假设电源电压到AD前的电压比是100：1
     
     KYJ_CalcRegValue();
@@ -1427,18 +1390,19 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     if(nCurrentSampleCount<20)  //1-19次采样A相
     {
         //取最大值
-        nValue = adc_Get_Value(CH_CurrentA);
-        if(nValue > nCurrent) nCurrent = nValue;
+        nSampleValue = adc_Get_Value(CH_CurrentA);
+        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
         //取平均值
-        //nCurrent+=adc_Get_Value(CH_CurrentA);
+//        nCurrent+=adc_Get_Value(CH_CurrentA);
     }
     else if(nCurrentSampleCount == 20) //第20次采样后，计算A相平均采样值
     {
         //取最大值
-        nValue = adc_Get_Value(CH_CurrentA);
-        if(nValue > nCurrent) nCurrent = nValue;
+        nSampleValue = adc_Get_Value(CH_CurrentA);
+        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
         //取平均值
-        //nCurrent+=adc_Get_Value(CH_CurrentA);
+//        nCurrent+=adc_Get_Value(CH_CurrentA);
+//        nCurrent = nCurrent / 10;
  
 //这个可能溢出
 //        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
@@ -1452,14 +1416,14 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     else if(nCurrentSampleCount < 40) //第21-39次采样B相
     {
         //nCurrent+=adc_Get_Value(CH_CurrentB);
-        nValue = adc_Get_Value(CH_CurrentB);
-        if(nValue > nCurrent) nCurrent = nValue;
+        nSampleValue = adc_Get_Value(CH_CurrentB);
+        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
     }
     else if(nCurrentSampleCount == 40) //第40次采样B相后，计算B相采样平均值
     {
 //        nCurrent+=adc_Get_Value(CH_CurrentB);
-        nValue = adc_Get_Value(CH_CurrentB);
-        if(nValue > nCurrent) nCurrent = nValue;
+        nSampleValue = adc_Get_Value(CH_CurrentB);
+        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
 //        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
 //        sKYJ.sRunParam.nCurrentB = nLongTemp/(1024*100*CURRENT_SAMPLE_RES); 
         nLongTemp = nCurrent * 5 * CURRENT_TRANS_RATIO;
@@ -1470,14 +1434,14 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     else if(nCurrentSampleCount <60) //第41-59次采样C相
     {
 //        nCurrent+=adc_Get_Value(CH_CurrentC);
-        nValue = adc_Get_Value(CH_CurrentC);
-        if(nValue > nCurrent) nCurrent = nValue;
+        nSampleValue = adc_Get_Value(CH_CurrentC);
+        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
     }
     else if(nCurrentSampleCount == 60)  //第60次采样C相后，计算C相平均采样值
     {
 //        nCurrent+=adc_Get_Value(CH_CurrentC);
-        nValue = adc_Get_Value(CH_CurrentC);
-        if(nValue > nCurrent) nCurrent = nValue;
+        nSampleValue = adc_Get_Value(CH_CurrentC);
+        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
 //        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
 //        sKYJ.sRunParam.nCurrentC = nLongTemp/(1024*100*CURRENT_SAMPLE_RES); 
         nLongTemp = nCurrent * 5 * CURRENT_TRANS_RATIO;
@@ -1494,20 +1458,22 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     {
         //更新压力
         nCurrent+=adc_Get_Value(CH_Pressure);
-        nValue = nCurrent / 10;
+        nSampleValue = nCurrent / 10;
+        //测试用
+        //nSampleValue = 600;
 
-//        nValue = adc_Get_Value(CH_Pressure);
-//        nLongTemp = (long) nValue * nADVref * 10;
+//        nSampleValue = adc_Get_Value(CH_Pressure);
+//        nLongTemp = (long) nSampleValue * nADVref * 10;
 
         
-//        nValue = adc_Get_Value(CH_Temperature)*15/10;  //测试用
-//        nLongTemp = (long) nValue * nADVref;  //测试用
-        nLongTemp = nValue * nADVref;
+//        nSampleValue = adc_Get_Value(CH_Temperature)*15/10;  //测试用
+//        nLongTemp = (long) nSampleValue * nADVref;  //测试用
+        nLongTemp = (long)nSampleValue * nADVref;
         nLongTemp = nLongTemp /22;
         nLongTemp = nLongTemp /1024;
-        nValue = nLongTemp -40;
-        //nValue = nLongTemp /(220*1024) - 40;  //压力计算公式：(sample/1024 * nADVref (mV) / 220 欧  - 4mA) * 0.1MPa/mA *100 倍数
-        sKYJ.sRunParam.nPressure = nValue;  //压力=nValue * 0.01MPa，如果是负值，很可能是没有接压力传感器，连4mA的电流都没有。    
+        nSampleValue = nLongTemp -40;
+        //nSampleValue = nLongTemp /(220*1024) - 40;  //压力计算公式：(sample/1024 * nADVref (mV) / 220 欧  - 4mA) * 0.1MPa/mA *100 倍数
+        sKYJ.sRunParam.nPressure = nSampleValue;  //压力=nSampleValue * 0.01MPa，如果是负值，很可能是没有接压力传感器，连4mA的电流都没有。 
         nCurrent = 0;
         nLongTemp = 0;
     }
@@ -1520,11 +1486,14 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     {
          //更新温度
         nCurrent += adc_Get_Value(CH_Temperature);
-        nValue = nCurrent/10;
+        nSampleValue = nCurrent/10;
+        
+        //测试用
+        //nSampleValue = 500;
 
-        nLongTemp = (long)nValue*5000*100;  //是否有溢出的风险
-        nValue = nLongTemp/(21000-nValue);  //得到电阻值，单位：0.01欧
-        nLongTemp = (long)(nValue - 10000) * 150 * 10 / 5700; 
+        nLongTemp = (long)nSampleValue*5000*100;  //是否有溢出的风险
+        nSampleValue = nLongTemp/(21000-nSampleValue);  //得到电阻值，单位：0.01欧
+        nLongTemp = (long)(nSampleValue - 10000) * 150 * 10 / 5700; 
         
         sKYJ.sRunParam.nTemperature = nLongTemp; //计算得到温度值，0.1度
         sKYJ.nTemperature = sKYJ.sRunParam.nTemperature/10;   //显示温度值   
@@ -1540,9 +1509,9 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     {
         //更新电源电压，RB3
         nCurrent += adc_Get_Value(CH_Power);
-        nValue = nCurrent/10;
+        nSampleValue = nCurrent/10;
 
-        nLongTemp = (long)nValue * nADVref * 6;  //采样电阻分压比5.5454：1，变压器变比11：1
+        nLongTemp = (long)nSampleValue * nADVref * 6;  //采样电阻分压比5.5454：1，变压器变比11：1
         sKYJ.sRunParam.nVoltage = nLongTemp /102400; //假设电源电压到AD前的电压比是100：1    
         
         nCurrent = 0;
@@ -1572,4 +1541,38 @@ void KYJ_CalcRegValue(void)  //根据调整参数计算调整后的传感器数�
     sKYJ.nCurrentA = (unsigned long)sKYJ.sRegParam.nStandCurrentAFactor*sKYJ.sRunParam.nCurrentA/1000;
     sKYJ.nCurrentB = (unsigned long)sKYJ.sRegParam.nStandCurrentBFactor*sKYJ.sRunParam.nCurrentB/1000;
     sKYJ.nCurrentC = (unsigned long)sKYJ.sRegParam.nStandCurrentCFactor*sKYJ.sRunParam.nCurrentC/1000;
+}
+
+void KYJ_ShowRunParam(void)
+{
+//    if(sKYJ.nInterface != INTERFACE_RUNPARAM) return;
+    switch(nParamIndex)
+    {
+        case 1:  //主机电流
+            //nLongTemp = (unsigned long)sKYJ.sRunParam.nCurrentA * sKYJ.sRegParam.nStandCurrentAFactor;
+            LcmPutFloatDigit(2,32,sKYJ.nCurrentA,4,0,1);
+            //nLongTemp = (unsigned long)sKYJ.sRunParam.nCurrentB*sKYJ.sRegParam.nStandCurrentBFactor;
+            LcmPutFloatDigit(4,32,sKYJ.nCurrentB,4,0,1);
+            //nLongTemp = (unsigned long)sKYJ.sRunParam.nCurrentC*sKYJ.sRegParam.nStandCurrentCFactor;
+            LcmPutFloatDigit(6,32,sKYJ.nCurrentC,4,0,1);
+            break;
+        case 2:  //压力
+            LcmPutFloatDigit(4,40,sKYJ.nPressure,4,0,2);
+            break;
+        case 3:  //运行总时间
+            LcmPutFixDigit(4,8,sKYJ.sRunParam.nTotalTime/10000,4,0);
+            LcmPutFixDigit(4,40,sKYJ.sRunParam.nTotalTime%10000,4,0);
+            break;
+
+        case 4:  //负载总时间
+            LcmPutFixDigit(4,8,sKYJ.sRunParam.nLoadTime/10000,4,0);
+            LcmPutFixDigit(4,40,sKYJ.sRunParam.nLoadTime%10000,4,0);
+            break;
+        case 5:  //电源电压
+            LcmPutFixDigit(4,40,sKYJ.nVoltage,4,0);
+            break;
+        default:
+            LcmPutFixDigit(4,40,0,4,0);
+            break;
+    }
 }

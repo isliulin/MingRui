@@ -21,6 +21,8 @@ extern "C" {
 #define KEY_MOVE_PIN PORTDbits.RD7
 #define KEY_OK_PIN PORTBbits.RB2
 
+#define KEY_EMERGY_STOP_PIN PORTBbits.RB0
+
 #define KEY_START 1
 #define KEY_STOP 2
 #define KEY_RESET 3
@@ -28,6 +30,7 @@ extern "C" {
 #define KEY_UP 5
 #define KEY_MOVE 6
 #define KEY_OK 7
+#define KEY_EMERGY_STOP 8    
     
 bit Key_Press(unsigned char cKey);
 bit Key_Release(unsigned char cKey);
