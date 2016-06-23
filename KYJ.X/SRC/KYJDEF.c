@@ -3,6 +3,7 @@
 #include "key.h"
 #include "adc.h"
 #include "EEPROM.h"
+#include "delay.h"
 
 volatile unsigned int nADVref=5000;  //AD参考电压，单位：mV
 struct KYJ_s sKYJ;
@@ -136,7 +137,18 @@ bit KYJ_CheckStatus(unsigned char nStatus)
             if(sKYJ.nStatus == STATUS_FAULTSTOP && sKYJ.nFaultFlag == 0) nRet = 1;
             
             //按下紧急停止按钮
-            if(Key_Press(KEY_EMERGY_STOP)) {LOAD_SW_OFF;MOTOR_SW_OFF;FAN_SW_OFF;nRet=1;}
+            //if(Key_Press(KEY_EMERGY_STOP)) {LOAD_SW_OFF;MOTOR_SW_OFF;FAN_SW_OFF;nRet=1;}
+            if(KEY_EMERGY_STOP_PIN == 1)
+            {
+                DelayUs(100);
+                if(KEY_EMERGY_STOP_PIN == 1)
+                {
+                    LOAD_SW_OFF;
+                    MOTOR_SW_OFF;
+                    FAN_SW_OFF;
+                    nRet=1;
+                }
+            }
             break;
         case STATUS_DELAYSTOP:
             if(sKYJ.nStatus == STATUS_UNLOAD && sKYJ.nStatusTimeElapse > sKYJ.sUserParam.nNoLoadDelayTime) nRet = 1;
