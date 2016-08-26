@@ -67,7 +67,12 @@
 
 bit b50MsFlag;
 bit b1SecFlag;
+bit b1MinFlag;
+bit b1HourFlag;
 char nTimer1Count;
+char nSecCount;
+char nMinCount;
+char nHourCount;
 //int nTemp;
 void IO_Config(void);
 
@@ -104,7 +109,12 @@ int main(void)
 
 	b50MsFlag = 0;
     b1SecFlag=0;
+    b1MinFlag=0;
+    b1HourFlag=0;
     nTimer1Count = 0;
+    nSecCount = 0;
+    nMinCount = 0;
+    nHourCount = 0;
     IO_Config();  //初始化所有端口
     
     //初始化参数，如果已经保存到EEPROM，则读取，否则默认值初始化并保存
@@ -186,6 +196,57 @@ int main(void)
 //            IO_Config();
             if(sKYJ.nInterface == INTERFACE_RUNPARAM)KYJ_ShowRunParam();
             b1SecFlag=0;
+            
+            //是否1分钟到
+            nSecCount++;
+            if(nSecCount>=60)
+            {
+                b1MinFlag = 1;
+                nSecCount = 0;
+            }
+        }
+        if(b1MinFlag)
+        {
+            //如果不是停止状态，则运行时间加一
+            if((sKYJ.nStatus & 0xF0) == 0) sKYJ.sFactoryParam.nTotalRunTime++;
+            //如果是加载状态，则加载时间加一
+            if(sKYJ.nStatus == STATUS_LOAD) sKYJ.sFactoryParam.nTotalLoadTime++;
+            b1MinFlag = 0;
+            
+            nMinCount++;
+            if(nMinCount>=60)
+            {
+                b1HourFlag = 1;
+                nMinCount =0;
+            }
+            
+            //每隔10分钟，重新初始化下液晶
+            if((nMinCount%10) == 0 && sKYJ.nInterface == INTERFACE_MAIN)
+            //每隔1分钟，重新初始化下液晶
+            //if(sKYJ.nInterface == INTERFACE_MAIN)
+            {
+                LcmInit();
+                LcmSetSongBuff(12,0,0,0,0,0,0,0); //℃
+                LcmPutSongStr(1,32,BuffCharDot,1,0);
+                
+                LcmPutStr(104,1,(unsigned char *)"MPa");
+                LcmSetSongBuff(19,0,0,0,0,0,0,0); //秒
+                LcmPutSongStr(4,112,BuffCharDot,1,0);
+            }
+            //每隔1分钟，如果处于停止状态重新初始化下端口
+            if(sKYJ.nStatus&0xF0 != 0)
+            {
+                IO_Config();
+            }
+        }
+        if(b1HourFlag)
+        {
+            //每隔1小时，如果处于停止状态重新初始化下端口
+//            if(sKYJ.nStatus&0xF0 != 0)
+//            {
+//                IO_Config();
+//            }
+            b1HourFlag = 0;
         }
 
 		

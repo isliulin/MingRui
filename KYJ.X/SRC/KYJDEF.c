@@ -13,7 +13,7 @@ unsigned char nParamIndex;   //当前参数序号
 unsigned char nDigitIndex; //当前数位
 int nParamValue;
 
-unsigned int nCurrent;  //电流采样累加值
+unsigned long nCurrent;  //电流采样累加值
 unsigned char nCurrentSampleCount;  //电流采样次数，1ms采样一次，每20ms（对应50Hz）计算平均值
 unsigned long nLongTemp; //32位临时变量
 bit nRet;
@@ -40,16 +40,16 @@ void KYJ_Param_Default(void)
     sKYJ.nTemperature = 0;
     sKYJ.nVoltage = 0;
     
-    sKYJ.sUserParam.nLoadPress = 70;//加载压力
-    sKYJ.sUserParam.nUnLoadPress = 90;//卸载压力
-    sKYJ.sUserParam.nFanStartTemp = 80; //风机启温度
-    sKYJ.sUserParam.nFanStopTemp = 70;//风机停温度
+    sKYJ.sUserParam.nLoadPress = 60;//加载压力
+    sKYJ.sUserParam.nUnLoadPress = 70;//卸载压力
+    sKYJ.sUserParam.nFanStartTemp = 70; //风机启温度
+    sKYJ.sUserParam.nFanStopTemp = 66;//风机停温度
     sKYJ.sUserParam.nMCUDelayTime = 8; //主机延时时间，单位：秒
     sKYJ.sUserParam.nSADelayTime = 6; //星角延时时间，单位：秒
     sKYJ.sUserParam.nLoadDelayTime = 2; //加载延时时间，单位：秒
-    sKYJ.sUserParam.nNoLoadDelayTime = 600; //空载延时时间
+    sKYJ.sUserParam.nNoLoadDelayTime = 120; //空载延时时间
     sKYJ.sUserParam.nStopDelayTime =10; //停机延时时间
-    sKYJ.sUserParam.nRestartDelayTime = 100; //重启延时时间
+    sKYJ.sUserParam.nRestartDelayTime = 60; //重启延时时间
     sKYJ.sUserParam.nStartStopMode = 0; //启停方式
     sKYJ.sUserParam.nLoadMode = 1; //加载方式
     sKYJ.sUserParam.nCommMode = 0 ; //通讯方式
@@ -76,15 +76,15 @@ void KYJ_Param_Default(void)
     sKYJ.sUserParam.nPassword = 0000;//修改用户密码
     
     
-    sKYJ.sFactoryParam.nMainMotorNormalCurrent = 100;  //主机额定电流
+    sKYJ.sFactoryParam.nMainMotorNormalCurrent = 200;  //主机额定电流
     sKYJ.sFactoryParam.nWarningTemp = 105; //排温预警温度
-    sKYJ.sFactoryParam.nStopTemp = 110;//排温停机温度
-    sKYJ.sFactoryParam.nStopPress = 100; //供气停机压力
+    sKYJ.sFactoryParam.nStopTemp = 100;//排温停机温度
+    sKYJ.sFactoryParam.nStopPress = 90; //供气停机压力
     sKYJ.sFactoryParam.nUnloadPressLimit= 80; //卸载压力高限
     sKYJ.sFactoryParam.nTotalRunTime = 0; //运行总时间
     sKYJ.sFactoryParam.nTotalLoadTime = 0; //负载总时间
     sKYJ.sFactoryParam.nHistoryFaultRest = 0; //历史故障复位
-    sKYJ.sFactoryParam.nCurrentNotBalance = 6; //电流不平衡度
+    sKYJ.sFactoryParam.nCurrentNotBalance = 15; //电流不平衡度
     sKYJ.sFactoryParam.nNoPhaseProtectTime = 2; //断相保护时间
     sKYJ.sFactoryParam.nProductDate = 160101; //出厂日期
     sKYJ.sFactoryParam.nProductSN = 0;//出厂编号
@@ -205,6 +205,8 @@ bit KYJ_CheckStatus(unsigned char nStatus)
             if(!(sKYJ.nFaultFlag&0x40) && (sKYJ.nVoltage<180 || sKYJ.nVoltage> 240))
             {
                 sKYJ.nFaultFlag|=0x40;
+                //如果是电压偏低，可能是掉电了，保存参数
+                if(sKYJ.nVoltage<180) EEPROM_Save_Param(PARAM_STORE_BYTES);
                 nRet = 1;
             }
 
@@ -489,6 +491,9 @@ void KYJ_SwitchToInterface(unsigned char nInterface)
         case INTERFACE_MENU:
             nMenuIndex = 1;
             nParamIndex = 0;
+            
+            //重新初始化下液晶
+            LcmInit();
             
             break;
         case INTERFACE_RUNPARAM:
@@ -1079,18 +1084,23 @@ void KYJ_ShowFactoryParam(unsigned char nParamIndex)  //显示厂家参数
                     case 6:
                         LcmSetSongBuff(20,21,87,33,34,0,0,0); //运行总时间
                         LcmPutSongStr(1,0,BuffCharDot,5,0);
-                        nParamValue = sKYJ.sFactoryParam.nTotalRunTime;
+                        sKYJ.sRunParam.nTotalTime = sKYJ.sFactoryParam.nTotalRunTime / 60;
+                        LcmPutFixDigit(4,8,sKYJ.sRunParam.nTotalTime/10000,4,0);
+                        //LcmPutFixDigit(4,40,sKYJ.sRunParam.nTotalTime%10000,4,0);
+                        nParamValue = sKYJ.sRunParam.nTotalTime%10000;
                         LcmPutFixDigit(4,40,nParamValue,4,0);
-                        LcmSetSongBuff(119,33,0,0,0,0,0,0); //秒
-                        LcmPutSongStr(4,96,BuffCharDot,2,0);                       
+                        LcmSetSongBuff(119,33,0,0,0,0,0,0); //小时
+                        LcmPutSongStr(4,96,BuffCharDot,2,0);                          
                         break;
                     case 7:
                         LcmSetSongBuff(88,36,87,33,34,0,0,0); //负载总时间
                         LcmPutSongStr(1,0,BuffCharDot,5,0);
-                        nParamValue = sKYJ.sFactoryParam.nTotalLoadTime;
+                        sKYJ.sRunParam.nLoadTime = sKYJ.sFactoryParam.nTotalLoadTime / 60;
+                        LcmPutFixDigit(4,8,sKYJ.sRunParam.nLoadTime/10000,4,0);
+                        nParamValue = sKYJ.sRunParam.nLoadTime%10000;
                         LcmPutFixDigit(4,40,nParamValue,4,0);
-                        LcmSetSongBuff(119,33,0,0,0,0,0,0); //秒
-                        LcmPutSongStr(4,96,BuffCharDot,2,0);                         
+                        LcmSetSongBuff(119,33,0,0,0,0,0,0); //小时
+                        LcmPutSongStr(4,96,BuffCharDot,2,0);                          
                         break;
                     case 8:
                         LcmSetSongBuff(109,10,98,99,0,0,0,0); //低温保护
@@ -1402,19 +1412,19 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     if(nCurrentSampleCount<20)  //1-19次采样A相
     {
         //取最大值
-        nSampleValue = adc_Get_Value(CH_CurrentA);
-        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
+//        nSampleValue = adc_Get_Value(CH_CurrentA);
+//        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
         //取平均值
-//        nCurrent+=adc_Get_Value(CH_CurrentA);
+        nCurrent+=adc_Get_Value(CH_CurrentA);
     }
     else if(nCurrentSampleCount == 20) //第20次采样后，计算A相平均采样值
     {
         //取最大值
-        nSampleValue = adc_Get_Value(CH_CurrentA);
-        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
+//        nSampleValue = adc_Get_Value(CH_CurrentA);
+//        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
         //取平均值
-//        nCurrent+=adc_Get_Value(CH_CurrentA);
-//        nCurrent = nCurrent / 10;
+        nCurrent+=adc_Get_Value(CH_CurrentA);
+        nCurrent = nCurrent / 10;
  
 //这个可能溢出
 //        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
@@ -1427,15 +1437,16 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     }
     else if(nCurrentSampleCount < 40) //第21-39次采样B相
     {
-        //nCurrent+=adc_Get_Value(CH_CurrentB);
-        nSampleValue = adc_Get_Value(CH_CurrentB);
-        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
+        nCurrent+=adc_Get_Value(CH_CurrentB);
+//        nSampleValue = adc_Get_Value(CH_CurrentB);
+//        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
     }
     else if(nCurrentSampleCount == 40) //第40次采样B相后，计算B相采样平均值
     {
-//        nCurrent+=adc_Get_Value(CH_CurrentB);
-        nSampleValue = adc_Get_Value(CH_CurrentB);
-        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
+        nCurrent+=adc_Get_Value(CH_CurrentB);
+        nCurrent = nCurrent /10;
+//        nSampleValue = adc_Get_Value(CH_CurrentB);
+//        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
 //        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
 //        sKYJ.sRunParam.nCurrentB = nLongTemp/(1024*100*CURRENT_SAMPLE_RES); 
         nLongTemp = nCurrent * 5 * CURRENT_TRANS_RATIO;
@@ -1445,15 +1456,16 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
     }
     else if(nCurrentSampleCount <60) //第41-59次采样C相
     {
-//        nCurrent+=adc_Get_Value(CH_CurrentC);
-        nSampleValue = adc_Get_Value(CH_CurrentC);
-        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
+        nCurrent+=adc_Get_Value(CH_CurrentC);
+//        nSampleValue = adc_Get_Value(CH_CurrentC);
+//        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
     }
     else if(nCurrentSampleCount == 60)  //第60次采样C相后，计算C相平均采样值
     {
-//        nCurrent+=adc_Get_Value(CH_CurrentC);
-        nSampleValue = adc_Get_Value(CH_CurrentC);
-        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
+        nCurrent+=adc_Get_Value(CH_CurrentC);
+        nCurrent = nCurrent /10;
+//        nSampleValue = adc_Get_Value(CH_CurrentC);
+//        if(nSampleValue > nCurrent) nCurrent = nSampleValue;
 //        nLongTemp = nCurrent * nADVref * CURRENT_TRANS_RATIO;
 //        sKYJ.sRunParam.nCurrentC = nLongTemp/(1024*100*CURRENT_SAMPLE_RES); 
         nLongTemp = nCurrent * 5 * CURRENT_TRANS_RATIO;
@@ -1557,26 +1569,41 @@ void KYJ_CalcRegValue(void)  //根据调整参数计算调整后的传感器数�
 
 void KYJ_ShowRunParam(void)
 {
+    int nCurrent;
 //    if(sKYJ.nInterface != INTERFACE_RUNPARAM) return;
     switch(nParamIndex)
     {
         case 1:  //主机电流
-            //nLongTemp = (unsigned long)sKYJ.sRunParam.nCurrentA * sKYJ.sRegParam.nStandCurrentAFactor;
-            LcmPutFloatDigit(2,32,sKYJ.nCurrentA,4,0,1);
-            //nLongTemp = (unsigned long)sKYJ.sRunParam.nCurrentB*sKYJ.sRegParam.nStandCurrentBFactor;
-            LcmPutFloatDigit(4,32,sKYJ.nCurrentB,4,0,1);
-            //nLongTemp = (unsigned long)sKYJ.sRunParam.nCurrentC*sKYJ.sRegParam.nStandCurrentCFactor;
-            LcmPutFloatDigit(6,32,sKYJ.nCurrentC,4,0,1);
+            nCurrent = max(sKYJ.nCurrentA,sKYJ.nCurrentB);
+            nCurrent = max(nCurrent,sKYJ.nCurrentC);
+            //如果处于停止状态，而且电流也没超过额定电流一半，则显示0
+            if((sKYJ.nStatus & 0xF0)!=0 && nCurrent < sKYJ.sFactoryParam.nMainMotorNormalCurrent/2)
+            {
+                LcmPutFloatDigit(2,32,0,4,0,1);
+                LcmPutFloatDigit(4,32,0,4,0,1);
+                LcmPutFloatDigit(6,32,0,4,0,1);                
+            }
+            else
+            {
+                //nLongTemp = (unsigned long)sKYJ.sRunParam.nCurrentA * sKYJ.sRegParam.nStandCurrentAFactor;
+                LcmPutFloatDigit(2,32,sKYJ.nCurrentA,4,0,1);
+                //nLongTemp = (unsigned long)sKYJ.sRunParam.nCurrentB*sKYJ.sRegParam.nStandCurrentBFactor;
+                LcmPutFloatDigit(4,32,sKYJ.nCurrentB,4,0,1);
+                //nLongTemp = (unsigned long)sKYJ.sRunParam.nCurrentC*sKYJ.sRegParam.nStandCurrentCFactor;
+                LcmPutFloatDigit(6,32,sKYJ.nCurrentC,4,0,1);
+            }
             break;
         case 2:  //压力
             LcmPutFloatDigit(4,40,sKYJ.nPressure,4,0,2);
             break;
         case 3:  //运行总时间
+            sKYJ.sRunParam.nTotalTime = sKYJ.sFactoryParam.nTotalRunTime / 60;
             LcmPutFixDigit(4,8,sKYJ.sRunParam.nTotalTime/10000,4,0);
             LcmPutFixDigit(4,40,sKYJ.sRunParam.nTotalTime%10000,4,0);
             break;
 
         case 4:  //负载总时间
+            sKYJ.sRunParam.nLoadTime = sKYJ.sFactoryParam.nTotalLoadTime / 60;
             LcmPutFixDigit(4,8,sKYJ.sRunParam.nLoadTime/10000,4,0);
             LcmPutFixDigit(4,40,sKYJ.sRunParam.nLoadTime%10000,4,0);
             break;

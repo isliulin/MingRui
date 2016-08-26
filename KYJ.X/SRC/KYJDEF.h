@@ -69,8 +69,8 @@ struct KYJ_FactoryParam_s
     unsigned int nStopTemp;//排温停机温度
     unsigned int nStopPress; //供气停机压力
     unsigned int nUnloadPressLimit; //卸载压力高限
-    unsigned long nTotalRunTime; //运行总时间
-    unsigned long nTotalLoadTime; //负载总时间
+    unsigned long nTotalRunTime; //运行总时间，单位：分钟
+    unsigned long nTotalLoadTime; //负载总时间，单位：分钟
     unsigned int nHistoryFaultRest; //历史故障复位
     unsigned int nCurrentNotBalance; //电流不平衡度
     unsigned int nNoPhaseProtectTime; //断相保护时间
