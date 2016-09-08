@@ -1,5 +1,6 @@
 #include<xc.h>
-#include"KYJDEF.h"
+#include "EEPROM.h"
+#include "KYJDEF.h"
 void EEPROM_Write(unsigned char nAddr, unsigned char nData)
 {
     EEADR = nAddr;
@@ -32,7 +33,7 @@ void EEPROM_Save_Param(unsigned char nBytes)
     nAddr = (unsigned char *)&sKYJ.sUserParam;
     for(i=0;i<nBytes;i++)
     {
-        EEPROM_Write(i+0x11,*nAddr++);
+        EEPROM_Write(EEPROM_PARAM_ADDR+i,*nAddr++);
     }
 }
 
@@ -43,6 +44,29 @@ void EEPROM_Load_Param(unsigned char nBytes)
     nAddr = (unsigned char *)&sKYJ.sUserParam;
     for(i=0;i<nBytes;i++)
     {
-        *nAddr++=EEPROM_Read(i+0x11);
+        *nAddr++=EEPROM_Read(EEPROM_PARAM_ADDR+i);
     }
+}
+
+void EEPROM_Save_Counter(void)  //保存各计数值
+{
+    unsigned char * nAddr;
+    unsigned char i;
+    nAddr = (unsigned char *)&sKYJ.sFactoryParam.nTotalRunTime;
+    for(i=0;i<8;i++)  //nTotalRunTime 和 nTotalLoadTime 共8个字节。
+    {
+        EEPROM_Write(EEPROM_COUNTER_ADDR+i,*nAddr++);
+    }
+    
+}
+
+void EEPROM_Load_Counter(void) //读取各计数值
+{
+    unsigned char * nAddr;
+    unsigned char i;
+    nAddr = (unsigned char *)&sKYJ.sFactoryParam.nTotalRunTime;
+    for(i=0;i<8;i++) //nTotalRunTime 和 nTotalLoadTime 共8个字节。
+    {
+        *nAddr++=EEPROM_Read(EEPROM_COUNTER_ADDR+i);
+    }    
 }

@@ -119,14 +119,15 @@ int main(void)
     
     //初始化参数，如果已经保存到EEPROM，则读取，否则默认值初始化并保存
     KYJ_Param_Default();
-    if(EEPROM_Read(0x10) == 100)
+    if(EEPROM_Read(EEPROM_FLAG_ADDR) == 100)
     {
         EEPROM_Load_Param(PARAM_STORE_BYTES);
+        EEPROM_Load_Counter();//这个要放在后面
     }
     else
     {
         EEPROM_Save_Param(PARAM_STORE_BYTES);
-        EEPROM_Write(0x10,100);
+        EEPROM_Write(EEPROM_FLAG_ADDR,100);
     }
     
     //初始化
@@ -153,6 +154,8 @@ int main(void)
     LED_ERROR_OFF;
     BEEP_OFF;
 
+    //运行前验证下参数设置是否正确，另外在每次设置参数值后也要验证下
+    sKYJ.nValidateParamResult = KYJ_ValidateParam();
     //sKYJ.nStatusTimeElapse = sKYJ.sUserParam.nRestartDelayTime;
     //sKYJ.sFactoryParam.nLowTempProtect = -10;
     while(1)

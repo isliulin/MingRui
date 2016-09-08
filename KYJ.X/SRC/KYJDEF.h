@@ -27,16 +27,16 @@ struct KYJ_RunParam_s
 
 struct KYJ_UserParam_s
 {
-    unsigned int nLoadPress; //加载压力，单位：00.01MPa
-    unsigned int nUnLoadPress; //卸载压力
-    unsigned int nFanStartTemp; //风机启温度
-    unsigned int nFanStopTemp; //风机停温度
-    unsigned int nMCUDelayTime; //主机延时时间，单位：秒
-    unsigned int nSADelayTime; //星角延时时间，单位：秒
-    unsigned int nLoadDelayTime; //加载延时时间，单位：秒
-    unsigned int nNoLoadDelayTime; //空载延时时间
-    unsigned int nStopDelayTime; //停机延时时间
-    unsigned int nRestartDelayTime; //重启延时时间
+    unsigned int nLoadPress; //加载压力，单位：00.01MPa，范围1~200
+    unsigned int nUnLoadPress; //卸载压力，单位：00.01MPa，范围1~200
+    unsigned int nFanStartTemp; //风机启温度，单位：摄氏度，范围1~100
+    unsigned int nFanStopTemp; //风机停温度，单位：摄氏度，范围1~100
+    unsigned int nMCUDelayTime; //主机延时时间，单位：秒，范围1~100
+    unsigned int nSADelayTime; //星角延时时间，单位：秒，范围1~100
+    unsigned int nLoadDelayTime; //加载延时时间，单位：秒，范围1~100
+    unsigned int nNoLoadDelayTime; //空载延时时间，范围1~9000
+    unsigned int nStopDelayTime; //停机延时时间，范围1~1000
+    unsigned int nRestartDelayTime; //重启延时时间，范围1~1000
     unsigned char nStartStopMode; //启停方式
     unsigned char nLoadMode; //加载方式；1-自动，0-手动
     unsigned char nCommMode; //通讯方式
@@ -64,11 +64,11 @@ struct KYJ_UserParam_s
 };
 struct KYJ_FactoryParam_s
 {
-    unsigned int nMainMotorNormalCurrent;  //主机额定电流，单位0.1A
-    unsigned int nWarningTemp; //排温预警温度
-    unsigned int nStopTemp;//排温停机温度
-    unsigned int nStopPress; //供气停机压力
-    unsigned int nUnloadPressLimit; //卸载压力高限
+    unsigned int nMainMotorNormalCurrent;  //主机额定电流，单位0.1A，范围1~1000
+    unsigned int nWarningTemp; //排温预警温度，范围1~200
+    unsigned int nStopTemp;//排温停机温度，范围1~200
+    unsigned int nStopPress; //供气停机压力，范围1~200
+    unsigned int nUnloadPressLimit; //卸载压力高限，范围1~200
     unsigned long nTotalRunTime; //运行总时间，单位：分钟
     unsigned long nTotalLoadTime; //负载总时间，单位：分钟
     unsigned int nHistoryFaultRest; //历史故障复位
@@ -152,7 +152,7 @@ struct KYJ_Password_s
 #define BEEP_ON PORTEbits.RE1=1  //蜂鸣器开关
 #define BEEP_OFF PORTEbits.RE1=0
 
-#define PARAM_STORE_BYTES 0x01B8-0x0127+1 //EEPROM保存的参数字节数
+//#define PARAM_STORE_BYTES 0x01B8-0x0127+1 //EEPROM保存的参数字节数，改到EEPROM.h中声明
 #define CURRENT_TRANS_RATIO 420 //互感器变流比例
 #define CURRENT_SAMPLE_RES 10 //电流采样电阻
 
@@ -166,7 +166,8 @@ struct KYJ_s
     unsigned char nInterface; //显示的界面
     unsigned int nStatusTimeElapse;  //进入某一状态后的时间持续值，单位：秒
     unsigned char nInterfaceTimeElapse;
-    unsigned int nFaultFlag;//故障标志，D0 缺相；D1 电流不平衡；D2 过热停机；D3 超压停机；D4低温保护；D5过载保护；D6电源电压保护；D7压力传感器故障；D8温度传感器故障
+    unsigned char nValidateParamResult; //参数验证结果，0正常，非0表示错误序号
+    unsigned int nFaultFlag;//故障标志，D0 缺相；D1 电流不平衡；D2 过热停机；D3 超压停机；D4低温保护；D5过载保护；D6电源电压保护；D7压力传感器故障；D8温度传感器故障；D9参数设置错误
     unsigned int nCurrentA;  //校正计算后的电流，0.1A
     unsigned int nCurrentB;
     unsigned int nCurrentC;
@@ -199,6 +200,7 @@ void KYJ_UpdateData(void);  //更新压力、温度、电流
 void KYJ_SampleCurrent(void);  //在定时中断中1ms调用一次
 void KYJ_Init(void);
 void KYJ_ShowRunParam(void);
+unsigned char KYJ_ValidateParam(void);  //验证设置参数，如果没有错误返回0，否则返回第一个错误参数序号
 
 #ifdef	__cplusplus
 }

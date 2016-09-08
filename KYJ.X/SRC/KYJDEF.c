@@ -77,8 +77,8 @@ void KYJ_Param_Default(void)
     
     
     sKYJ.sFactoryParam.nMainMotorNormalCurrent = 200;  //主机额定电流
-    sKYJ.sFactoryParam.nWarningTemp = 105; //排温预警温度
-    sKYJ.sFactoryParam.nStopTemp = 100;//排温停机温度
+    sKYJ.sFactoryParam.nWarningTemp = 100; //排温预警温度
+    sKYJ.sFactoryParam.nStopTemp = 105;//排温停机温度
     sKYJ.sFactoryParam.nStopPress = 90; //供气停机压力
     sKYJ.sFactoryParam.nUnloadPressLimit= 80; //卸载压力高限
     sKYJ.sFactoryParam.nTotalRunTime = 0; //运行总时间
@@ -206,7 +206,12 @@ bit KYJ_CheckStatus(unsigned char nStatus)
             {
                 sKYJ.nFaultFlag|=0x40;
                 //如果是电压偏低，可能是掉电了，保存参数
-                if(sKYJ.nVoltage<180) EEPROM_Save_Param(PARAM_STORE_BYTES);
+                if(sKYJ.nVoltage<180)
+                {
+                    LED_OFF;
+                    EEPROM_Save_Counter();
+                    LED_ON;
+                }
                 nRet = 1;
             }
 
@@ -227,6 +232,13 @@ bit KYJ_CheckStatus(unsigned char nStatus)
             {
                 sKYJ.nFaultFlag |= 0x04; 
                 nRet=1;
+            }
+            
+            //如果参数错误，也要报故障停止
+            if(!(sKYJ.nFaultFlag&0x200) && (sKYJ.nValidateParamResult !=0))
+            {
+                sKYJ.nFaultFlag |= 0x200; 
+                nRet=1;               
             }
             break;
         case STATUS_STARTUP:
@@ -422,7 +434,7 @@ bit KYJ_CheckInterface(unsigned char nInterface)
     {
         case INTERFACE_MAIN:
             if(sKYJ.nInterface == 0 ||
-                    (sKYJ.nInterface!=INTERFACE_MAIN && sKYJ.nInterfaceTimeElapse > 30) ||  //在其他界面没有按键操作达30秒 
+                    (sKYJ.nInterface!=INTERFACE_MAIN && sKYJ.nInterfaceTimeElapse > 10) ||  //在其他界面没有按键操作达30秒 
                     (sKYJ.nInterface == INTERFACE_MENU && Key_Release(KEY_RESET))
                     ) nRet = 1;
             break;
@@ -612,6 +624,10 @@ void KYJ_ExecuteInterface(void)
                     {
                         LcmSetSongBuff(97,108,98,99,30,0,0,0);
                     }
+                    else if(sKYJ.nFaultFlag & 0x200) //参数保护
+                    {
+                        LcmSetSongBuff(22,23,98,99,30,0,0,0);
+                    }
                     else
                     {
                         //LcmSetSongBuff(13,14,15,17,18,0,0,0);//设备已停止
@@ -619,7 +635,9 @@ void KYJ_ExecuteInterface(void)
                     }
                     //显示故障代码
                     LcmPutSongStr(4,0,BuffCharDot,5,0);
-                    LcmPutFixDigit(4,79,sKYJ.nFaultFlag,4,0);
+                    
+                    if(sKYJ.nFaultFlag == 0x200) LcmPutFixDigit(4,79,sKYJ.nValidateParamResult,4,0);
+                    else LcmPutFixDigit(4,79,sKYJ.nFaultFlag,4,0);
                     LcmPutStr(111,4,(unsigned char *)"  "); //把秒覆盖掉
                     break;
                 case STATUS_STARTUP:
@@ -689,7 +707,7 @@ void KYJ_ExecuteInterface(void)
             LcmPutFloatDigit(1,64,sKYJ.nPressure,4,0,2);
             
             //显示调试信息
-            LcmPutFixDigit(6,30,sKYJ.nStatus,4,0);
+            //LcmPutFixDigit(6,30,sKYJ.nStatus,4,0);
             break;
         case INTERFACE_MENU:
             if(Key_Release(KEY_DOWN))
@@ -1374,7 +1392,9 @@ void KYJ_EnterParamValue(unsigned char nMI,unsigned char nPI, int nValue)
     {
         KYJ_SwitchToInterface(INTERFACE_PASSWORD);
     }
-    EEPROM_Save_Param(PARAM_STORE_BYTES);
+    sKYJ.nValidateParamResult = KYJ_ValidateParam(); //保存数据前先验证下，否则不保存
+    if(sKYJ.nValidateParamResult == 0)
+        EEPROM_Save_Param(PARAM_STORE_BYTES);
 }
 
 void KYJ_UpdateData(void)  //更新压力、温度、电流
@@ -1614,4 +1634,74 @@ void KYJ_ShowRunParam(void)
             LcmPutFixDigit(4,40,0,4,0);
             break;
     }
+}
+
+unsigned char KYJ_ValidateParam(void)  //验证设置参数，如果没有错误返回0，否则返回第一个错误参数序号
+{
+    //用户参数
+    if(sKYJ.sUserParam.nLoadPress<1 
+            || sKYJ.sUserParam.nLoadPress>=sKYJ.sUserParam.nUnLoadPress
+            || sKYJ.sUserParam.nLoadPress>200) return 8;
+    
+    if(sKYJ.sUserParam.nUnLoadPress<1 
+            || sKYJ.sUserParam.nUnLoadPress <= sKYJ.sUserParam.nLoadPress
+            || sKYJ.sUserParam.nUnLoadPress>200
+            || sKYJ.sUserParam.nUnLoadPress > sKYJ.sFactoryParam.nUnloadPressLimit) return 9;
+    
+    if(sKYJ.sUserParam.nFanStartTemp<1 
+            || sKYJ.sUserParam.nFanStartTemp <= sKYJ.sUserParam.nFanStopTemp
+            || sKYJ.sUserParam.nFanStartTemp >= sKYJ.sFactoryParam.nWarningTemp) return 1;
+    
+    if(sKYJ.sUserParam.nFanStopTemp<10 
+            || sKYJ.sUserParam.nFanStopTemp >= sKYJ.sUserParam.nFanStartTemp) return 2;
+    
+    if(sKYJ.sUserParam.nMCUDelayTime<1 
+            || sKYJ.sUserParam.nMCUDelayTime>100) return 3;
+    
+    if(sKYJ.sUserParam.nSADelayTime<1 
+            || sKYJ.sUserParam.nSADelayTime>100) return 11;    
+    
+    if(sKYJ.sUserParam.nLoadDelayTime<1 
+            || sKYJ.sUserParam.nLoadDelayTime>100) return 4;      
+    
+    if(sKYJ.sUserParam.nNoLoadDelayTime<1 
+            || sKYJ.sUserParam.nNoLoadDelayTime>9000) return 5;    
+    
+    if(sKYJ.sUserParam.nStopDelayTime<1
+            || sKYJ.sUserParam.nStopDelayTime >= sKYJ.sUserParam.nRestartDelayTime  //停机延时时间不能大于重启延时时间
+            || sKYJ.sUserParam.nStopDelayTime>1000) return 6;     
+    
+    if(sKYJ.sUserParam.nRestartDelayTime<1 
+            || sKYJ.sUserParam.nRestartDelayTime>1000) return 7;    
+    //厂家参数
+    
+    if(sKYJ.sFactoryParam.nMainMotorNormalCurrent<1
+            ||sKYJ.sFactoryParam.nMainMotorNormalCurrent>1000) return 101;
+    
+    if(sKYJ.sFactoryParam.nWarningTemp<1
+            ||sKYJ.sFactoryParam.nWarningTemp>150
+            ||sKYJ.sFactoryParam.nWarningTemp >= sKYJ.sFactoryParam.nStopTemp ) return 102;
+
+    if(sKYJ.sFactoryParam.nStopTemp<1
+            ||sKYJ.sFactoryParam.nStopTemp>150
+            ||sKYJ.sFactoryParam.nStopTemp <= sKYJ.sFactoryParam.nWarningTemp ) return 103;
+
+    if(sKYJ.sFactoryParam.nStopPress<1
+            ||sKYJ.sFactoryParam.nStopPress>200
+            ||sKYJ.sFactoryParam.nStopPress <= sKYJ.sFactoryParam.nUnloadPressLimit ) return 104;    
+    
+    if(sKYJ.sFactoryParam.nUnloadPressLimit<1
+            ||sKYJ.sFactoryParam.nUnloadPressLimit>200
+            ||sKYJ.sFactoryParam.nUnloadPressLimit >= sKYJ.sFactoryParam.nStopPress ) return 105;
+    
+    if(sKYJ.sFactoryParam.nLowTempProtect<1
+            ||sKYJ.sFactoryParam.nLowTempProtect>100) return 108;    
+    
+    if(sKYJ.sFactoryParam.nCurrentNotBalance<1
+            ||sKYJ.sFactoryParam.nCurrentNotBalance>100) return 109;
+
+    if(sKYJ.sFactoryParam.nStartType != 0
+            && sKYJ.sFactoryParam.nStartType != 1) return 10;
+    //调整参数
+    return 0;
 }
