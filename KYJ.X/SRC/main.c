@@ -148,7 +148,7 @@ int main(void)
     LcmSetSongBuff(5,6,7,8,9,0,0,0);
     LcmPutSongStr(4,20,BuffCharDot,5,0);
     asm("CLRWDT");
-    DelayS(1);
+    DelayS(3);
     LcmClear(0x00);
     LED_RUN_OFF;
     LED_ERROR_OFF;

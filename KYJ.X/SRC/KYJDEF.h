@@ -174,6 +174,8 @@ struct KYJ_s
     int nTemperature; //校正计算后的温度，度
     int nPressure; //校正计算后的压力值，0.01MPa
     unsigned int nVoltage; //校正计算后的电源电压，V
+    unsigned int nUserPass; //当前用户输入密码
+    unsigned int nFactoryPass; //当前厂家输入密码
     struct KYJ_RunParam_s sRunParam;
     struct KYJ_UserParam_s sUserParam;
     struct KYJ_FactoryParam_s sFactoryParam;

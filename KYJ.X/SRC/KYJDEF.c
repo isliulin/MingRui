@@ -12,6 +12,18 @@ unsigned char nMenuIndex;  //当前菜单序号  1-运行参数；2-用户参数
 unsigned char nParamIndex;   //当前参数序号
 unsigned char nDigitIndex; //当前数位
 int nParamValue;
+int nPassValue;
+
+unsigned int nCurrentLimit12Count;
+unsigned int nCurrentLimit13Count;
+unsigned char nCurrentLimit15Count;
+unsigned char nCurrentLimit16Count;
+unsigned char nCurrentLimit20Count;
+unsigned char nCurrentLimit30Count;
+unsigned char nCurrentLimit0Count;
+unsigned char nCurrentNotBalanceCount;
+unsigned char nCurrentNotBalance0Count;
+
 
 unsigned long nCurrent;  //电流采样累加值
 unsigned char nCurrentSampleCount;  //电流采样次数，1ms采样一次，每20ms（对应50Hz）计算平均值
@@ -23,6 +35,15 @@ void KYJ_Init(void)
 {
     nCurrent=0;
     nCurrentSampleCount=0;
+    nCurrentLimit12Count = 0;
+    nCurrentLimit13Count = 0;
+    nCurrentLimit15Count = 0;
+    nCurrentLimit16Count = 0;
+    nCurrentLimit20Count = 0;
+    nCurrentLimit30Count = 0;
+    nCurrentLimit0Count = 0;
+    nCurrentNotBalanceCount = 0;
+    nCurrentNotBalance0Count = 0;
     
     sKYJ.nStatus = STATUS_POWERSTOP;
     sKYJ.nFaultFlag = 0;
@@ -39,6 +60,9 @@ void KYJ_Param_Default(void)
     sKYJ.nPressure = 0;
     sKYJ.nTemperature = 0;
     sKYJ.nVoltage = 0;
+    sKYJ.nValidateParamResult = 0;
+    sKYJ.nUserPass = 0;
+    sKYJ.nFactoryPass = 0;
     
     sKYJ.sUserParam.nLoadPress = 60;//加载压力
     sKYJ.sUserParam.nUnLoadPress = 70;//卸载压力
@@ -155,11 +179,11 @@ bit KYJ_CheckStatus(unsigned char nStatus)
             break;
         case STATUS_FAULTSTOP:
             //if(sKYJ.nStatus !=STATUS_FAULTSTOP)
-            //相序检测
+            //相序和缺相检测
             if(!(sKYJ.nFaultFlag&0x01) && !PORTAbits.RA4) {sKYJ.nFaultFlag |= 0x01;nRet=1;}
             else if(PORTAbits.RA4) sKYJ.nFaultFlag &= 0xFE;
             
-            if(!(sKYJ.nStatus == STATUS_STARTUP && sKYJ.nStatusTimeElapse <sKYJ.sUserParam.nMCUDelayTime)) //如果在启动时间内，则不检测电流不平衡
+            if(!(sKYJ.nStatus & 0xF0) && !(sKYJ.nStatus == STATUS_STARTUP && sKYJ.nStatusTimeElapse <sKYJ.sUserParam.nMCUDelayTime)) //如果在启动时间内，则不检测电流不平衡
             {
                 //电流不平衡检测，是否需要在主机延时时间以后才检测？
                 nCurrentMax = max(sKYJ.nCurrentA,sKYJ.nCurrentB);
@@ -174,17 +198,74 @@ bit KYJ_CheckStatus(unsigned char nStatus)
 
                         if(nCurrentMax > (nCurrentMin*(10+sKYJ.sFactoryParam.nCurrentNotBalance)/10))
                         {
+                            nCurrentNotBalanceCount++;
+                        }
+                        else
+                        {
+                            nCurrentNotBalance0Count++;
+                        }
+                        
+                        if(nCurrentNotBalance0Count>7)
+                        {
+                            nCurrentNotBalance0Count=0;
+                            nCurrentNotBalanceCount=0;
+                        }
+                        else if(nCurrentNotBalanceCount>40)  //动作时间5秒钟
+                        {
+                            nCurrentNotBalance0Count=0;
+                            nCurrentNotBalanceCount=0;
                             sKYJ.nFaultFlag |= 0x02;
-                            nRet=1;
+                            nRet=1;                           
                         }
 
                 }
                 //过载保护，在主机延时时间以后才检测
-                if(!(sKYJ.nFaultFlag&0x20) && 
-                        nCurrentMax > (sKYJ.sFactoryParam.nMainMotorNormalCurrent * 12 /10))   //大于额定电流1.2倍
+//                if(!(sKYJ.nFaultFlag&0x20) && 
+//                        nCurrentMax > (sKYJ.sFactoryParam.nMainMotorNormalCurrent * 12 /10))   //大于额定电流1.2倍
+                if(!(sKYJ.nFaultFlag&0x20))
                 {
-                    sKYJ.nFaultFlag |=0x20;
-                    nRet=1;
+                    if(nCurrentMax > (sKYJ.sFactoryParam.nMainMotorNormalCurrent * 30 /10))
+                        nCurrentLimit30Count++;
+                    else if(nCurrentMax > sKYJ.sFactoryParam.nMainMotorNormalCurrent * 20 /10)
+                        nCurrentLimit20Count++;
+                    else if(nCurrentMax > sKYJ.sFactoryParam.nMainMotorNormalCurrent * 16 /10)
+                        nCurrentLimit16Count++;
+                    else if(nCurrentMax > sKYJ.sFactoryParam.nMainMotorNormalCurrent * 15 /10)
+                        nCurrentLimit15Count++;
+                    else if(nCurrentMax > sKYJ.sFactoryParam.nMainMotorNormalCurrent * 13 /10)
+                        nCurrentLimit13Count++;
+                    else if(nCurrentMax > sKYJ.sFactoryParam.nMainMotorNormalCurrent * 12 /10)
+                        nCurrentLimit12Count++;
+                    else
+                        nCurrentLimit0Count++;
+                    if(nCurrentLimit0Count>7)  //如果有1秒时间里正常，则全部清零，运行周期125ms
+                    {
+                        nCurrentLimit12Count = 0;
+                        nCurrentLimit13Count = 0;
+                        nCurrentLimit15Count = 0;
+                        nCurrentLimit16Count = 0;
+                        nCurrentLimit20Count = 0;
+                        nCurrentLimit30Count = 0;
+                        nCurrentLimit0Count = 0;
+                    }
+                    else if(nCurrentLimit12Count>384
+                            || nCurrentLimit13Count>192
+                            || nCurrentLimit15Count>64
+                            || nCurrentLimit16Count>40
+                            || nCurrentLimit20Count>8
+                            || nCurrentLimit30Count>0)  //反时限保护
+                    {
+                        nCurrentLimit12Count = 0;
+                        nCurrentLimit13Count = 0;
+                        nCurrentLimit15Count = 0;
+                        nCurrentLimit16Count = 0;
+                        nCurrentLimit20Count = 0;
+                        nCurrentLimit30Count = 0;
+                        nCurrentLimit0Count = 0;
+                        
+                        sKYJ.nFaultFlag |=0x20;
+                        nRet=1;
+                    }
                 }
             }
             //超压检测
@@ -434,7 +515,7 @@ bit KYJ_CheckInterface(unsigned char nInterface)
     {
         case INTERFACE_MAIN:
             if(sKYJ.nInterface == 0 ||
-                    (sKYJ.nInterface!=INTERFACE_MAIN && sKYJ.nInterfaceTimeElapse > 10) ||  //在其他界面没有按键操作达30秒 
+                    (sKYJ.nInterface!=INTERFACE_MAIN && sKYJ.nInterfaceTimeElapse > 30) ||  //在其他界面没有按键操作达30秒 
                     (sKYJ.nInterface == INTERFACE_MENU && Key_Release(KEY_RESET))
                     ) nRet = 1;
             break;
@@ -498,6 +579,10 @@ void KYJ_SwitchToInterface(unsigned char nInterface)
 
                 LcmSetSongBuff(19,0,0,0,0,0,0,0); //秒
                 LcmPutSongStr(4,112,BuffCharDot,1,0);
+                
+                //密码清零
+                sKYJ.nUserPass = 0;
+                sKYJ.nFactoryPass = 0;
 
             break;
         case INTERFACE_MENU:
@@ -525,6 +610,18 @@ void KYJ_SwitchToInterface(unsigned char nInterface)
             break;
         case INTERFACE_PARAM:
             //nParamIndex = 1;
+            if((nMenuIndex==2 && sKYJ.nUserPass != sKYJ.sPassword.nUserPass)
+                    || ((nMenuIndex==3||nMenuIndex==4) && sKYJ.nFactoryPass != sKYJ.sPassword.nFactoryPass))
+            {
+                //nPassValue = sKYJ.nUserPass;
+                LcmClear(0);
+                LcmSetSongBuff(38,39,40,41,0,0,0,0); //输入密码
+                LcmPutSongStr(1,0,BuffCharDot,4,0);
+                
+                if(nMenuIndex==2)nPassValue = sKYJ.nUserPass;
+                else if(nMenuIndex==3||nMenuIndex==4) nPassValue = sKYJ.nFactoryPass;
+            }
+            
             nDigitIndex = 1;
             break;
         default:
@@ -708,6 +805,7 @@ void KYJ_ExecuteInterface(void)
             
             //显示调试信息
             //LcmPutFixDigit(6,30,sKYJ.nStatus,4,0);
+            //LcmPutFixDigit(6,30,nCurrentLimit12Count,4,0);
             break;
         case INTERFACE_MENU:
             if(Key_Release(KEY_DOWN))
@@ -815,13 +913,13 @@ void KYJ_ExecuteInterface(void)
             if(Key_Release(KEY_DOWN))
             {
                 nParamIndex++;
-                if(nParamIndex> 11) nParamIndex = 1;
+                if(nParamIndex> 12) nParamIndex = 1;
                 bRefreshInterface = 1;
             }
             else if(Key_Release(KEY_UP))
             {
                 nParamIndex--;
-                if(nParamIndex<1) nParamIndex = 11;
+                if(nParamIndex<1) nParamIndex = 12;
                 bRefreshInterface = 1;
             }
             if(bRefreshInterface)
@@ -834,13 +932,13 @@ void KYJ_ExecuteInterface(void)
             if(Key_Release(KEY_DOWN))
             {
                 nParamIndex++;
-                if(nParamIndex> 9) nParamIndex = 1;
+                if(nParamIndex> 10) nParamIndex = 1;
                 bRefreshInterface = 1;
             }
             else if(Key_Release(KEY_UP))
             {
                 nParamIndex--;
-                if(nParamIndex<1) nParamIndex = 9;
+                if(nParamIndex<1) nParamIndex = 10;
                 bRefreshInterface = 1;
             }
             if(bRefreshInterface)
@@ -871,65 +969,153 @@ void KYJ_ExecuteInterface(void)
         case INTERFACE_PASSWORD:
             break;
         case INTERFACE_PARAM:
-            tempValue[3] = nParamValue/1000;
-            tempValue[2] = (nParamValue - tempValue[3]*1000)/100;
-            tempValue[1] = (nParamValue - tempValue[3]*1000-tempValue[2]*100)/10;
-            tempValue[0] = nParamValue%10;
-            
-            if(Key_Release(KEY_DOWN))
+            if((nMenuIndex==2 && sKYJ.nUserPass != sKYJ.sPassword.nUserPass)
+                    ||((nMenuIndex==3 || nMenuIndex==4) && sKYJ.nFactoryPass != sKYJ.sPassword.nFactoryPass))
             {
-                
-                if(tempValue[nDigitIndex-1]==0) 
-                    tempValue[nDigitIndex-1]=10;
-                tempValue[nDigitIndex-1]--;
+                tempValue[3] = nPassValue/1000;
+                tempValue[2] = (nPassValue - tempValue[3]*1000)/100;
+                tempValue[1] = (nPassValue - tempValue[3]*1000-tempValue[2]*100)/10;
+                tempValue[0] = nPassValue%10;
+                if(Key_Release(KEY_DOWN))
+                {
+                    if(tempValue[nDigitIndex-1]==0) 
+                        tempValue[nDigitIndex-1]=10;
+                    tempValue[nDigitIndex-1]--;
+                }
+                else if(Key_Release(KEY_UP))
+                {
+                    tempValue[nDigitIndex-1]++;
+                    if(tempValue[nDigitIndex-1]>9)tempValue[nDigitIndex-1]=0;
+                }
+                else if(Key_Release(KEY_MOVE))
+                {
+                    nDigitIndex++;
+                    if(nDigitIndex>4)nDigitIndex = 1;
+                }
+                nPassValue = tempValue[3]*1000 + tempValue[2]*100 + tempValue[1]*10 + tempValue[0];
+                LcmPutFixDigit(4,40,nPassValue,4,nDigitIndex);
+                if(Key_Release(KEY_OK))
+                {
+                    nDigitIndex = 1;
+                    if(nMenuIndex == 2)
+                    {
+                        sKYJ.nUserPass = nPassValue;
+                        if(sKYJ.nUserPass == sKYJ.sPassword.nUserPass)
+                        {
+                            LcmClear(0);
+                            KYJ_ShowUserParam(nParamIndex);
+                        }
+                    }
+                    else if(nMenuIndex == 3)
+                    {
+                        sKYJ.nFactoryPass = nPassValue;
+                        if(sKYJ.nFactoryPass == sKYJ.sPassword.nFactoryPass)
+                        {
+                            LcmClear(0);
+                            KYJ_ShowFactoryParam(nParamIndex);
+                        }
+                    }
+                    else if(nMenuIndex == 4 )
+                    {
+                        sKYJ.nFactoryPass = nPassValue;
+                        if(sKYJ.nFactoryPass == sKYJ.sPassword.nFactoryPass)
+                        {
+                            LcmClear(0);
+                            KYJ_ShowRegParam(nParamIndex);
+                        }
+                    }
+                }                
             }
-            else if(Key_Release(KEY_UP))
-            {
-                tempValue[nDigitIndex-1]++;
-                if(tempValue[nDigitIndex-1]>9)tempValue[nDigitIndex-1]=0;
-            }
-            else if(Key_Release(KEY_MOVE))
-            {
-                nDigitIndex++;
-                if(nDigitIndex>4)nDigitIndex = 1;
-            }
-//            else if(Key_Release(KEY_OK))
+//            else if((nMenuIndex==3 || nMenuIndex==4) && sKYJ.nFactoryPass != sKYJ.sPassword.nFactoryPass)
 //            {
-//                KYJ_EnterParamValue(nMenuIndex,nParamIndex,nParamValue);
+//                tempValue[3] = sKYJ.nFactoryPass/1000;
+//                tempValue[2] = (sKYJ.nFactoryPass - tempValue[3]*1000)/100;
+//                tempValue[1] = (sKYJ.nFactoryPass - tempValue[3]*1000-tempValue[2]*100)/10;
+//                tempValue[0] = sKYJ.nFactoryPass%10;
+//                if(Key_Release(KEY_DOWN))
+//                {
+//                    if(tempValue[nDigitIndex-1]==0) 
+//                        tempValue[nDigitIndex-1]=10;
+//                    tempValue[nDigitIndex-1]--;
+//                }
+//                else if(Key_Release(KEY_UP))
+//                {
+//                    tempValue[nDigitIndex-1]++;
+//                    if(tempValue[nDigitIndex-1]>9)tempValue[nDigitIndex-1]=0;
+//                }
+//                else if(Key_Release(KEY_MOVE))
+//                {
+//                    nDigitIndex++;
+//                    if(nDigitIndex>4)nDigitIndex = 1;
+//                }
+//                LcmPutFixDigit(4,40,tempValue[3]*1000 + tempValue[2]*100 + tempValue[1]*10 + tempValue[0],4,nDigitIndex);
+//                if(Key_Release(KEY_OK))
+//                {
+//                    sKYJ.nFactoryPass = tempValue[3]*1000 + tempValue[2]*100 + tempValue[1]*10 + tempValue[0];
+//                    nDigitIndex = 1;
+//                }                  
 //            }
-            nParamValue = tempValue[3]*1000 + tempValue[2]*100 + tempValue[1]*10 + tempValue[0];
-            if(nMenuIndex == 2 && (nParamIndex==8 || nParamIndex == 9))
-                LcmPutFloatDigit(4,40,nParamValue,4,nDigitIndex,2);
-            else if(nMenuIndex == 2 && nParamIndex == 10) //启动方式
-            {
-                nDigitIndex = 1;
-                if(nParamValue>0)nParamValue = 1;
-                LcmPutFixDigit(4,40,nParamValue,1,nDigitIndex);
-                if(nParamValue == 0)
-                    LcmSetSongBuff(122,123,31,32,0,0,0,0); //直接启动
-                else
-                    LcmSetSongBuff(120,121,31,32,0,0,0,0); //星角启动
-                LcmPutSongStr(4,60,BuffCharDot,4,0);                
-            }
-            else if(nMenuIndex == 3 && (nParamIndex==1 || nParamIndex==9))
-                LcmPutFloatDigit(4,40,nParamValue,4,nDigitIndex,1);
-            else if(nMenuIndex == 3 && (nParamIndex == 4 || nParamIndex == 5))
-                LcmPutFloatDigit(4,40,nParamValue,4,nDigitIndex,2);
-            else if(nMenuIndex == 4 && (nParamIndex == 1 || nParamIndex == 2|| nParamIndex ==3))
-                LcmPutFloatDigit(0,87,nParamValue,4,nDigitIndex,1);
-            else if(nMenuIndex == 4 && nParamIndex==4)
-                LcmPutFixDigit(3,87,nParamValue,4,nDigitIndex);
-            else if(nMenuIndex == 4 && nParamIndex==5)
-                LcmPutFixDigit(0,87,nParamValue,4,nDigitIndex);
-            else if(nMenuIndex == 4 && nParamIndex==6)
-                LcmPutFixDigit(0,87,nParamValue,4,nDigitIndex);
             else
-                LcmPutFixDigit(4,40,nParamValue,4,nDigitIndex);
-            if(Key_Release(KEY_OK))
             {
-                KYJ_EnterParamValue(nMenuIndex,nParamIndex,nParamValue);
+                tempValue[3] = nParamValue/1000;
+                tempValue[2] = (nParamValue - tempValue[3]*1000)/100;
+                tempValue[1] = (nParamValue - tempValue[3]*1000-tempValue[2]*100)/10;
+                tempValue[0] = nParamValue%10;
+
+                if(Key_Release(KEY_DOWN))
+                {
+
+                    if(tempValue[nDigitIndex-1]==0) 
+                        tempValue[nDigitIndex-1]=10;
+                    tempValue[nDigitIndex-1]--;
+                }
+                else if(Key_Release(KEY_UP))
+                {
+                    tempValue[nDigitIndex-1]++;
+                    if(tempValue[nDigitIndex-1]>9)tempValue[nDigitIndex-1]=0;
+                }
+                else if(Key_Release(KEY_MOVE))
+                {
+                    nDigitIndex++;
+                    if(nDigitIndex>4)nDigitIndex = 1;
+                }
+    //            else if(Key_Release(KEY_OK))
+    //            {
+    //                KYJ_EnterParamValue(nMenuIndex,nParamIndex,nParamValue);
+    //            }
+                nParamValue = tempValue[3]*1000 + tempValue[2]*100 + tempValue[1]*10 + tempValue[0];
+                if(nMenuIndex == 2 && (nParamIndex==8 || nParamIndex == 9))
+                    LcmPutFloatDigit(4,40,nParamValue,4,nDigitIndex,2);
+                else if(nMenuIndex == 2 && nParamIndex == 10) //启动方式
+                {
+                    nDigitIndex = 1;
+                    if(nParamValue>0)nParamValue = 1;
+                    LcmPutFixDigit(4,40,nParamValue,1,nDigitIndex);
+                    if(nParamValue == 0)
+                        LcmSetSongBuff(122,123,31,32,0,0,0,0); //直接启动
+                    else
+                        LcmSetSongBuff(120,121,31,32,0,0,0,0); //星角启动
+                    LcmPutSongStr(4,60,BuffCharDot,4,0);                
+                }
+                else if(nMenuIndex == 3 && (nParamIndex==1 || nParamIndex==9))
+                    LcmPutFloatDigit(4,40,nParamValue,4,nDigitIndex,1);
+                else if(nMenuIndex == 3 && (nParamIndex == 4 || nParamIndex == 5))
+                    LcmPutFloatDigit(4,40,nParamValue,4,nDigitIndex,2);
+                else if(nMenuIndex == 4 && (nParamIndex == 1 || nParamIndex == 2|| nParamIndex ==3))
+                    LcmPutFloatDigit(0,87,nParamValue,4,nDigitIndex,1);
+                else if(nMenuIndex == 4 && nParamIndex==4)
+                    LcmPutFixDigit(3,87,nParamValue,4,nDigitIndex);
+                else if(nMenuIndex == 4 && nParamIndex==5)
+                    LcmPutFixDigit(0,87,nParamValue,4,nDigitIndex);
+                else if(nMenuIndex == 4 && nParamIndex==6)
+                    LcmPutFixDigit(0,87,nParamValue,4,nDigitIndex);
+                else
+                    LcmPutFixDigit(4,40,nParamValue,4,nDigitIndex);
+                if(Key_Release(KEY_OK))
+                {
+                    KYJ_EnterParamValue(nMenuIndex,nParamIndex,nParamValue);
+                }
             }
-            
             break;
         default:
             break;
@@ -1041,6 +1227,15 @@ void KYJ_ShowUserParam(unsigned char nParamIndex)
                         LcmSetSongBuff(19,0,0,0,0,0,0,0); //秒
                         LcmPutSongStr(4,96,BuffCharDot,1,0);
                         break;
+                    case 12:
+                        LcmSetSongBuff(75,76,4,24,40,41,0,0);//用户密码
+                        LcmPutSongStr(1,0,BuffCharDot,6,0);
+                        nParamValue = sKYJ.sPassword.nUserPass;
+                        if(sKYJ.nUserPass == sKYJ.sPassword.nUserPass)
+                            LcmPutFixDigit(4,40,nParamValue,4,0);
+                        else
+                            LcmPutStr(40,4,(unsigned char *)"****");
+                        break;                        
                     default:
                         break;
                 }    
@@ -1140,7 +1335,15 @@ void KYJ_ShowFactoryParam(unsigned char nParamIndex)  //显示厂家参数
                         LcmPutSongStr(1,0,BuffCharDot,6,0);
                         nParamValue = sKYJ.sFactoryParam.nCurrentNotBalance;
                         LcmPutFloatDigit(4,40,nParamValue,4,0,1);
-                        break;                        
+                        break;       
+                    case 10:
+                        LcmSetSongBuff(75,76,25,26,40,41,0,0);//修改厂家密码
+                        LcmPutSongStr(1,0,BuffCharDot,6,0);
+                        nParamValue = sKYJ.sPassword.nFactoryPass;
+                        if(sKYJ.nFactoryPass == sKYJ.sPassword.nFactoryPass)
+                            LcmPutFixDigit(4,40,nParamValue,4,0);
+                        else
+                            LcmPutStr(40,4,(unsigned char *)"****");
                     default:
                         break;
                 }    
@@ -1308,6 +1511,9 @@ void KYJ_EnterParamValue(unsigned char nMI,unsigned char nPI, int nValue)
             case 11:
                 sKYJ.sUserParam.nSADelayTime = nValue;
                 break;
+            case 12:
+                sKYJ.sPassword.nUserPass = nValue;
+                break;
             default:
                 break;            
         }
@@ -1335,10 +1541,10 @@ void KYJ_EnterParamValue(unsigned char nMI,unsigned char nPI, int nValue)
                         sKYJ.sFactoryParam.nUnloadPressLimit=nValue;
                         break;
                     case 6:
-                        sKYJ.sFactoryParam.nTotalRunTime = nValue;
+                        sKYJ.sFactoryParam.nTotalRunTime = (unsigned long)nValue*60;
                         break;
                     case 7:
-                        sKYJ.sFactoryParam.nTotalLoadTime = nValue;
+                        sKYJ.sFactoryParam.nTotalLoadTime = (unsigned long)nValue*60;
                         break;
                     case 8:
                         sKYJ.sFactoryParam.nLowTempProtect = nValue;
@@ -1346,7 +1552,10 @@ void KYJ_EnterParamValue(unsigned char nMI,unsigned char nPI, int nValue)
                     case 9:
                         //sKYJ.sFactoryParam.nTimeLimit = nValue;
                         sKYJ.sFactoryParam.nCurrentNotBalance = nValue;
-                        break;                        
+                        break;
+                    case 10:
+                        sKYJ.sPassword.nFactoryPass = nValue;
+                        break;
                     default:
                         break;
                 }        
@@ -1560,6 +1769,12 @@ void KYJ_SampleCurrent(void)  //在定时中断中1ms调用一次
         
         nCurrent = 0;
     }   
+    //调试假设传感器值
+//    sKYJ.sRunParam.nVoltage = 220;
+//    sKYJ.sRunParam.nCurrentA = 100;
+//    sKYJ.sRunParam.nCurrentB = 20;
+//    sKYJ.sRunParam.nCurrentC = 30;
+    //假设值结束，正常运行时请注释上面代码
     
     if(nCurrentSampleCount >= 100)
     {
@@ -1676,7 +1891,7 @@ unsigned char KYJ_ValidateParam(void)  //验证设置参数，如果没有错误
     //厂家参数
     
     if(sKYJ.sFactoryParam.nMainMotorNormalCurrent<1
-            ||sKYJ.sFactoryParam.nMainMotorNormalCurrent>1000) return 101;
+            ||sKYJ.sFactoryParam.nMainMotorNormalCurrent>9000) return 101;
     
     if(sKYJ.sFactoryParam.nWarningTemp<1
             ||sKYJ.sFactoryParam.nWarningTemp>150
@@ -1698,7 +1913,7 @@ unsigned char KYJ_ValidateParam(void)  //验证设置参数，如果没有错误
             ||sKYJ.sFactoryParam.nLowTempProtect>100) return 108;    
     
     if(sKYJ.sFactoryParam.nCurrentNotBalance<1
-            ||sKYJ.sFactoryParam.nCurrentNotBalance>100) return 109;
+            ||sKYJ.sFactoryParam.nCurrentNotBalance>20) return 109;
 
     if(sKYJ.sFactoryParam.nStartType != 0
             && sKYJ.sFactoryParam.nStartType != 1) return 10;
