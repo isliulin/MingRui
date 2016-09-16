@@ -21,7 +21,7 @@
 
 // CONFIG2H
 #pragma config WDTEN = OFF      // Watchdog Timer Enable bit (WDT is controlled by SWDTEN bit of the WDTCON register)
-#pragma config WDTPS = 32768    // Watchdog Timer Postscale Select bits (1:32768)
+#pragma config WDTPS = 4096    // Watchdog Timer Postscale Select bits (1:32768)
 
 // CONFIG3H
 #pragma config CCP2MX = PORTC   // CCP2 MUX bit (CCP2 input/output is multiplexed with RC1)
@@ -158,6 +158,7 @@ int main(void)
     sKYJ.nValidateParamResult = KYJ_ValidateParam();
     //sKYJ.nStatusTimeElapse = sKYJ.sUserParam.nRestartDelayTime;
     //sKYJ.sFactoryParam.nLowTempProtect = -10;
+    SWDTEN = 1;
     while(1)
 	{
         //检查状态

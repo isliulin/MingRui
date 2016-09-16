@@ -287,12 +287,13 @@ bit KYJ_CheckStatus(unsigned char nStatus)
             {
                 sKYJ.nFaultFlag|=0x40;
                 //如果是电压偏低，可能是掉电了，保存参数
-                if(sKYJ.nVoltage<180)
-                {
-                    LED_OFF;
-                    EEPROM_Save_Counter();
-                    LED_ON;
-                }
+                //改为在switch to keystop里面保存
+//                if(sKYJ.nVoltage<180)
+//                {
+//                    LED_OFF;
+//                    EEPROM_Save_Counter();
+//                    LED_ON;
+//                }
                 nRet = 1;
             }
 
@@ -404,13 +405,17 @@ void KYJ_SwitchToStatus(unsigned char nStatus)
             LOAD_SW_OFF;
             FAN_SW_OFF;
             MOTOR_SW_OFF;
+            BEEP_ON;
             break;
         case STATUS_POWERSTOP:
             LED_RUN_OFF;
-            //break;
+            LED_RUN_OFF;
+            LOAD_SW_OFF;            
+            break;
         case STATUS_KEYSTOP:
             LED_RUN_OFF;
             LOAD_SW_OFF;
+            EEPROM_Save_Counter();
             break;
         case STATUS_DELAYSTOP:
             LED_RUN_OFF;
@@ -471,7 +476,12 @@ void KYJ_ExcecuteStatus(void)
                 FAN_SW_OFF;
                 LOAD_SW_OFF;
             }
-            if(Key_Press(KEY_OK)) sKYJ.nFaultFlag=0;  //按下OK键，则错误标志清零。
+            if(Key_Press(KEY_OK))
+            {
+                BEEP_OFF;
+                LED_ERROR_OFF;
+                sKYJ.nFaultFlag=0;  //按下OK键，则错误标志清零。
+            }
             break;
         case STATUS_STARTUP:
             if(sKYJ.sFactoryParam.nStartType == 1) //星角启动
