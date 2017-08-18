@@ -1,9 +1,11 @@
 #include<xc.h>
 #include "EEPROM.h"
 #include "KYJDEF.h"
+#include "delay.h"
 void EEPROM_Write(unsigned char nAddr, unsigned char nData)
 {
     EEADR = nAddr;
+    EEADRH = 0; //没用到高位，要存储的最大地址是0XAE
     EEDATA = nData;
     CFGS = 0;
     EEPGD = 0;
@@ -20,6 +22,7 @@ void EEPROM_Write(unsigned char nAddr, unsigned char nData)
 unsigned char EEPROM_Read(unsigned char nAddr)
 {
     EEADR = nAddr;
+    EEADRH  = 0; //没用到高位，要存储的最大地址是0XAE
     CFGS = 0;
     EEPGD = 0;
     EECON1bits.RD = 1;
@@ -30,10 +33,11 @@ void EEPROM_Save_Param(unsigned char nBytes)
 {
     unsigned char * nAddr;
     unsigned char i;
-    nAddr = (unsigned char *)&sKYJ.sUserParam;
+    nAddr = &sKYJ.sUserParam;
     for(i=0;i<nBytes;i++)
     {
         EEPROM_Write(EEPROM_PARAM_ADDR+i,*nAddr++);
+
     }
 }
 
@@ -41,7 +45,7 @@ void EEPROM_Load_Param(unsigned char nBytes)
 {
     unsigned char * nAddr;
     unsigned char i;
-    nAddr = (unsigned char *)&sKYJ.sUserParam;
+    nAddr = &sKYJ.sUserParam;
     for(i=0;i<nBytes;i++)
     {
         *nAddr++=EEPROM_Read(EEPROM_PARAM_ADDR+i);
@@ -52,7 +56,7 @@ void EEPROM_Save_Counter(void)  //保存各计数值
 {
     unsigned char * nAddr;
     unsigned char i;
-    nAddr = (unsigned char *)&sKYJ.sFactoryParam.nTotalRunTime;
+    nAddr = &sKYJ.sFactoryParam.nTotalRunTime;
     for(i=0;i<8;i++)  //nTotalRunTime 和 nTotalLoadTime 共8个字节。
     {
         EEPROM_Write(EEPROM_COUNTER_ADDR+i,*nAddr++);
@@ -64,7 +68,7 @@ void EEPROM_Load_Counter(void) //读取各计数值
 {
     unsigned char * nAddr;
     unsigned char i;
-    nAddr = (unsigned char *)&sKYJ.sFactoryParam.nTotalRunTime;
+    nAddr = &sKYJ.sFactoryParam.nTotalRunTime;
     for(i=0;i<8;i++) //nTotalRunTime 和 nTotalLoadTime 共8个字节。
     {
         *nAddr++=EEPROM_Read(EEPROM_COUNTER_ADDR+i);

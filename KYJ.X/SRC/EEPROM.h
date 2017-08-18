@@ -14,7 +14,7 @@ extern "C" {
     
 #define EEPROM_FLAG_ADDR 0x10  //EEPROM存储是否已经初始化标志的地址
 #define EEPROM_PARAM_ADDR 0x12 //EEPROM存储设置参数的地址
-#define PARAM_STORE_BYTES 0x01B8-0x0128+2 //EEPROM保存的参数字节数
+#define PARAM_STORE_BYTES 0x01BC-0x012C+2 //EEPROM保存的参数字节数
 #define EEPROM_COUNTER_ADDR EEPROM_PARAM_ADDR+PARAM_STORE_BYTES+2  //EEPROM保存各计数值的地址
     
 void EEPROM_Write(unsigned char nAddr, unsigned char nData);
